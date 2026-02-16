@@ -48,3 +48,6 @@ htmlcov/
 
 test_scan.json
 scan_results.json
+full_scan.json
+linux_scan_priv.json
+linux_scan.json
