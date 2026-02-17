@@ -7,8 +7,11 @@ from pathlib import Path
 import click
 
 from agent.checks.firewall import FirewallChecker
+from agent.checks.logging import LoggingChecker
 from agent.checks.passwords import PasswordChecker
+from agent.checks.permissions import PermissionChecker
 from agent.checks.ssh import SSHChecker
+from agent.checks.updates import UpdatesChecker
 from agent.checks.users import UserChecker
 
 AGENT_VERSION = "1.0.0"
@@ -28,7 +31,15 @@ def scan(output: str, privileged: bool, show_privileged: bool, verbose: bool) ->
         click.echo(f"Warning: Running on {platform.system()}, not Linux. Some checks may fail.")
         click.echo()
 
-    checkers = [SSHChecker(), FirewallChecker(), UserChecker(), PasswordChecker()]
+    checkers = [
+        SSHChecker(),
+        FirewallChecker(),
+        UserChecker(),
+        PasswordChecker(),
+        PermissionChecker(),
+        UpdatesChecker(),
+        LoggingChecker(),
+    ]
 
     if show_privileged:
         all_checks: list[dict] = []

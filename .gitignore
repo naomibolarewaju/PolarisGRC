@@ -51,3 +51,11 @@ scan_results.json
 full_scan.json
 linux_scan_priv.json
 linux_scan.json
+complete_scan.json
+entry_test.json
+linux_complete.json
+linux_priv.json
+
+
+# Packaging artifacts
+*.egg-info/

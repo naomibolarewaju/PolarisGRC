@@ -24,7 +24,8 @@ class LoggingChecker:
             return ("", "Command not found", 1)
 
     def check_auditd_enabled(self) -> dict:
-        #check if auditd is installed and actively running
+        #checks if auditd (Linux Audit Framework) is installed and actively running
+        #note: check will always fail on WSL2 due to kernel limitations, test on VM
         result: dict = {
             "check_id": "auditd_enabled",
             "name": "Auditd Installed and Active",
