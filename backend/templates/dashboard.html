@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PolarisGRC{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <h1 class="text-2xl font-bold">Security Dashboard</h1>
+        <p class="text-gray-500 mt-1">Overview of recent security scans and findings</p>
+    </div>
+</div>
+
+{% if scans %}
+<!-- Summary cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-lg shadow p-5">
+        <p class="text-sm text-gray-500">Total Scans</p>
+        <p class="text-2xl font-bold mt-1">{{ scans|length }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+        <p class="text-sm text-gray-500">Latest Scan</p>
+        <p class="text-lg font-semibold mt-1">{{ scans[0].hostname }}</p>
+        <p class="text-xs text-gray-400">{{ scans[0].scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+        <p class="text-sm text-gray-500">Latest Passed</p>
+        <p class="text-2xl font-bold mt-1 text-green-600">{{ scans[0].passed_checks or 0 }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+        <p class="text-sm text-gray-500">Latest Failed</p>
+        <p class="text-2xl font-bold mt-1 text-red-600">{{ scans[0].failed_checks or 0 }}</p>
+    </div>
+</div>
+
+<!-- Scans table -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold">Recent Scans</h2>
+    </div>
+
+    <!-- Desktop table -->
+    <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 text-gray-600 text-sm">
+                <tr>
+                    <th class="px-6 py-3 font-medium">Hostname</th>
+                    <th class="px-6 py-3 font-medium">Date</th>
+                    <th class="px-6 py-3 font-medium">OS</th>
+                    <th class="px-6 py-3 font-medium">Checks</th>
+                    <th class="px-6 py-3 font-medium">Passed</th>
+                    <th class="px-6 py-3 font-medium">Failed</th>
+                    <th class="px-6 py-3 font-medium">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for scan in scans %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 font-medium">{{ scan.hostname }}</td>
+                    <td class="px-6 py-4 text-gray-500">{{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="px-6 py-4 text-gray-500">
+                        {% if scan.os_name %}{{ scan.os_name }} {{ scan.os_version or '' }}{% else %}-{% endif %}
+                    </td>
+                    <td class="px-6 py-4">{{ scan.total_checks or 0 }}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">
+                            {{ scan.passed_checks or 0 }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-block bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">
+                            {{ scan.failed_checks or 0 }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
+                           class="text-blue-600 hover:text-blue-800 font-medium text-sm transition">
+                            View Details
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="md:hidden divide-y divide-gray-100">
+        {% for scan in scans %}
+        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
+           class="block px-4 py-4 hover:bg-gray-50 transition">
+            <div class="flex items-center justify-between">
+                <span class="font-medium">{{ scan.hostname }}</span>
+                <span class="text-xs text-gray-400">{{ scan.scan_timestamp.strftime('%Y-%m-%d') }}</span>
+            </div>
+            <div class="flex items-center gap-3 mt-2 text-sm">
+                <span class="text-gray-500">
+                    {% if scan.os_name %}{{ scan.os_name }}{% else %}Unknown OS{% endif %}
+                </span>
+                <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">{{ scan.passed_checks or 0 }} passed</span>
+                <span class="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">{{ scan.failed_checks or 0 }} failed</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+{% if scans|length >= 20 %}
+<p class="text-center text-gray-400 text-sm mt-4">Showing 20 most recent scans</p>
+{% endif %}
+
+{% else %}
+<!-- Empty state -->
+<div class="text-center py-20">
+    <svg class="mx-auto w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+    </svg>
+    <h2 class="text-xl font-semibold text-gray-700 mt-6">No scans yet</h2>
+    <p class="text-gray-500 mt-2 max-w-md mx-auto">
+        Run your first security scan to see results here. Install and run the PolarisGRC agent on a target Linux system.
+    </p>
+    <div class="mt-6 bg-gray-900 text-green-400 rounded-lg px-6 py-4 inline-block text-left font-mono text-sm">
+        <p class="text-gray-500"># Install and run the agent</p>
+        <p>$ pip install -e .</p>
+        <p>$ python -m agent --output scan_results.json</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
