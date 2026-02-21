@@ -366,7 +366,7 @@
             </thead>
             <tbody>
                 {% for scan in scans %}
-                <tr onclick="window.location='{{ url_for('dashboard.view_scan', scan_id=scan.id) }}'">
+                <tr class="scan-row" data-href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"></tr>
                     <td class="hostname-cell">{{ scan.hostname }}</td>
                     <td class="date-cell">{{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td class="os-cell">
