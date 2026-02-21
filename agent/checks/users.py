@@ -1,9 +1,12 @@
 import subprocess
+from datetime import datetime, timedelta
 from pathlib import Path
 
 PASSWD_PATH = "/etc/passwd"
 SUDOERS_PATH = "/etc/sudoers"
 SUDOERS_DIR = "/etc/sudoers.d"
+LASTLOG_INACTIVE_DAYS = 90
+MIN_REAL_USER_UID = 1000
 
 
 class UserChecker:
@@ -176,9 +179,149 @@ class UserChecker:
         self.checks.append(result)
         return result
 
+    def check_inactive_users(self) -> dict:
+        #check for real user accounts (UID >= 1000) that haven't logged in for 90+ days
+        result: dict = {
+            "check_id": "inactive_users",
+            "name": "Inactive User Accounts",
+            "category": "User Management",
+            "status": "PASS",
+            "severity": "MEDIUM",
+            "finding": "",
+            "remediation": None,
+            "requires_privilege": False,
+            "privilege_level": None,
+            "skip_reason": None,
+            "cis_reference": "6.2.14",
+            "compliance_mappings": {
+                "iso27001": ["A.9.2.5", "A.9.2.6"],
+                "gdpr": ["Article 32(1)(b)"],
+                "nist_csf": ["PR.AC-1"],
+            },
+        }
+
+        _REMEDIATION = (
+            "Review and disable/remove inactive accounts:\n"
+            "  sudo usermod -L <username>  # Lock account\n"
+            "  sudo userdel <username>     # Delete account\n"
+            "\n"
+            "Or set account expiration:\n"
+            "  sudo chage -E $(date -d '+30 days' +%Y-%m-%d) <username>"
+        )
+
+        # Step 1: read real users from /etc/passwd (UID >= MIN_REAL_USER_UID)
+        try:
+            passwd_text = Path(PASSWD_PATH).read_text()
+        except FileNotFoundError:
+            result["status"] = "ERROR"
+            result["finding"] = "/etc/passwd not found"
+            self.checks.append(result)
+            return result
+        except PermissionError:
+            result["status"] = "ERROR"
+            result["finding"] = "Permission denied reading /etc/passwd"
+            self.checks.append(result)
+            return result
+
+        real_users: set[str] = set()
+        for line in passwd_text.splitlines():
+            parts = line.strip().split(":")
+            if len(parts) >= 3:
+                try:
+                    if int(parts[2]) >= MIN_REAL_USER_UID:
+                        real_users.add(parts[0])
+                except ValueError:
+                    continue
+
+        if not real_users:
+            result["status"] = "PASS"
+            result["finding"] = "No regular user accounts found"
+            self.checks.append(result)
+            return result
+
+        # Step 2: run lastlog to get last login times
+        stdout, stderr, returncode = self._run_command(["lastlog"])
+        if returncode != 0:
+            reason = (
+                "lastlog command not available"
+                if stderr == "Command not found"
+                else "Unable to determine last login times"
+            )
+            result["status"] = "SKIPPED"
+            result["skip_reason"] = reason
+            result["finding"] = "Unable to determine last login times"
+            self.checks.append(result)
+            return result
+
+        # Step 3: parse lastlog output
+        # Format: "username  port  from  Mon Jan 27 12:00:00 +0000 2026"
+        # or:     "username                **Never logged in**"
+        last_logins: dict[str, datetime | None] = {}
+        cutoff = datetime.now() - timedelta(days=LASTLOG_INACTIVE_DAYS)
+
+        for line in stdout.splitlines()[1:]:  # skip header
+            parts = line.split()
+            if not parts or parts[0] not in real_users:
+                continue
+
+            username = parts[0]
+
+            if "**Never logged in**" in line:
+                last_logins[username] = None
+                continue
+
+            # Try to parse the trailing date tokens:
+            # with timezone: "Mon Jan 27 12:00:00 +0000 2026"  (last 6 tokens)
+            # without:       "Mon Jan 27 12:00:00 2026"         (last 5 tokens)
+            login_time: datetime | None = None
+            for n_tokens, fmt in (
+                (6, "%a %b %d %H:%M:%S %z %Y"),
+                (5, "%a %b %d %H:%M:%S %Y"),
+            ):
+                if len(parts) > n_tokens:  # username occupies parts[0]
+                    try:
+                        parsed = datetime.strptime(" ".join(parts[-n_tokens:]), fmt)
+                        login_time = parsed.replace(tzinfo=None)
+                        break
+                    except ValueError:
+                        continue
+
+            if login_time is not None:
+                last_logins[username] = login_time
+
+        # Step 4: classify each real user
+        inactive: list[str] = []
+        never_logged_in: list[str] = []
+
+        for username in real_users:
+            if username not in last_logins:
+                never_logged_in.append(username)
+            elif last_logins[username] is None:
+                never_logged_in.append(username)
+            elif last_logins[username] < cutoff:
+                inactive.append(username)
+
+        all_inactive = sorted(inactive) + sorted(never_logged_in)
+
+        if all_inactive:
+            result["status"] = "FAIL"
+            names = ", ".join(all_inactive)
+            result["finding"] = (
+                f"Found {len(all_inactive)} inactive user account(s): {names}\n"
+                f"These accounts have not logged in for {LASTLOG_INACTIVE_DAYS}+ days"
+            )
+            result["remediation"] = _REMEDIATION
+        else:
+            result["status"] = "PASS"
+            result["finding"] = "No inactive user accounts found"
+
+        self.checks.append(result)
+        return result
+
     def run_all_checks(self) -> list[dict]:
         #run all user management security checks
         self.checks = []
         self.check_uid_zero()
         self.check_passwordless_sudo()
+        self.check_inactive_users()
         return self.checks

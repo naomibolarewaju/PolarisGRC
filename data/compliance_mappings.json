@@ -1,0 +1,78 @@
+{
+  "ssh_root_login": {
+    "iso27001": ["A.9.2.3", "A.9.4.3"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-4", "PR.AC-7"]
+  },
+  "ssh_password_auth": {
+    "iso27001": ["A.9.2.3", "A.9.4.2"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-1", "PR.AC-7"]
+  },
+  "ssh_protocol_version": {
+    "iso27001": ["A.13.1.1", "A.18.1.5"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-5"]
+  },
+  "firewall_enabled": {
+    "iso27001": ["A.13.1.1", "A.13.1.3"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-5", "PR.PT-4"]
+  },
+  "password_min_length": {
+    "iso27001": ["A.9.4.3"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-1"]
+  },
+  "password_sha512": {
+    "iso27001": ["A.9.4.3", "A.10.1.1"],
+    "gdpr": ["Article 32(1)(a)", "Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-1", "PR.DS-1"]
+  },
+  "auto_updates_enabled": {
+    "iso27001": ["A.12.6.1", "A.12.6.2"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.IP-1", "PR.MA-1"]
+  },
+  "recent_updates": {
+    "iso27001": ["A.12.6.1"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.IP-1"]
+  },
+  "no_passwordless_sudo": {
+    "iso27001": ["A.9.2.3", "A.9.4.1"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-4"]
+  },
+  "uid_zero_root_only": {
+    "iso27001": ["A.9.2.3"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-4"]
+  },
+  "no_world_writable_files": {
+    "iso27001": ["A.9.4.5", "A.13.1.3"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-4", "PR.DS-5"]
+  },
+  "auditd_enabled": {
+    "iso27001": ["A.12.4.1", "A.12.4.2", "A.12.4.3"],
+    "gdpr": ["Article 32(1)(d)", "Article 30"],
+    "nist_csf": ["DE.AE-3", "DE.CM-1", "PR.PT-1"]
+  },
+  "password_complexity": {
+    "iso27001": ["A.9.4.3"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-1"]
+  },
+  "password_max_age": {
+    "iso27001": ["A.9.4.3"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-1"]
+  },
+  "inactive_users": {
+    "iso27001": ["A.9.2.5", "A.9.2.6"],
+    "gdpr": ["Article 32(1)(b)"],
+    "nist_csf": ["PR.AC-1"]
+  }
+
+}

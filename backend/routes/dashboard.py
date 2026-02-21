@@ -3,7 +3,9 @@
 
 import logging
 
-from flask import Blueprint, render_template
+from collections import defaultdict
+
+from flask import Blueprint, flash, redirect, render_template, url_for
 
 from backend import db
 from backend.models import Scan
@@ -32,11 +34,29 @@ def index():
 
 @dashboard_bp.route("/scan/<scan_id>")
 def view_scan(scan_id: str):
-    #display detailed results for a single scan
+    #display detailed results for a single scan, findings grouped by category
     scan = db.session.get(Scan, scan_id)
     if scan is None:
-        return render_template("404.html", message="Scan not found"), 404
-    return render_template("scan_detail.html", scan=scan)
+        flash("Scan not found.", "error")
+        return redirect(url_for("dashboard.index"))
+
+    # Group findings by category, preserving insertion order
+    categories: dict[str, list] = defaultdict(list)
+    for finding in scan.findings:
+        key = finding.category or "Uncategorised"
+        categories[key].append(finding)
+
+    # Status counts derived from actual findings (source of truth)
+    status_counts = {"PASS": 0, "FAIL": 0, "SKIPPED": 0, "ERROR": 0}
+    for finding in scan.findings:
+        status_counts[finding.status] = status_counts.get(finding.status, 0) + 1
+
+    return render_template(
+        "scan_detail.html",
+        scan=scan,
+        categories=categories,
+        status_counts=status_counts,
+    )
 
 
 # Register this blueprint in backend/__init__.py:

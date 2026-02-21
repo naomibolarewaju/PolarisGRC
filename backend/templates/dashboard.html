@@ -1,81 +1,386 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - PolarisGRC{% endblock %}
+{% block title %}Dashboard — PolarisGRC{% endblock %}
 
 {% block content %}
-<!-- Page header -->
-<div class="flex items-center justify-between mb-8">
+<style>
+    /* ── Page-specific styles ──────────────────────── */
+    .page-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+    }
+    .page-sub {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    /* ── Stat cards ────────────────────────────────── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(12px);
+        animation: fadeUp 0.45s ease forwards;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+    }
+    .stat-card:hover {
+        border-color: var(--border);
+        box-shadow: 0 0 0 1px var(--border), 0 4px 24px rgba(0,212,255,0.06);
+    }
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.12s; }
+    .stat-card:nth-child(3) { animation-delay: 0.19s; }
+    .stat-card:nth-child(4) { animation-delay: 0.26s; }
+
+    .stat-accent-blue::before  { background: var(--accent); }
+    .stat-accent-green::before { background: var(--pass); }
+    .stat-accent-red::before   { background: var(--fail); }
+    .stat-accent-warn::before  { background: var(--warn); }
+
+    .stat-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+    .stat-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+    }
+    .stat-sub {
+        font-size: 0.78rem;
+        color: var(--text-dim);
+        margin-top: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .stat-icon {
+        position: absolute;
+        top: 16px; right: 16px;
+        opacity: 0.07;
+    }
+
+    @keyframes fadeUp {
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Scans table card ──────────────────────────── */
+    .table-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .table-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--border-dim);
+    }
+    .table-card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .table-count-badge {
+        font-size: 0.72rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-muted);
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        padding: 2px 10px;
+        border-radius: 100px;
+    }
+
+    .scans-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+    .scans-table thead th {
+        padding: 10px 20px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        text-align: left;
+        border-bottom: 1px solid var(--border-dim);
+        background: var(--surface2);
+    }
+    .scans-table tbody tr {
+        border-bottom: 1px solid var(--border-dim);
+        transition: background 0.12s;
+        cursor: pointer;
+    }
+    .scans-table tbody tr:last-child { border-bottom: none; }
+    .scans-table tbody tr:hover { background: rgba(0,212,255,0.04); }
+    .scans-table td {
+        padding: 14px 20px;
+        vertical-align: middle;
+    }
+    .hostname-cell {
+        font-weight: 600;
+        color: var(--text);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+    }
+    .date-cell {
+        color: var(--text-dim);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    .os-cell {
+        color: var(--text-dim);
+        font-size: 0.82rem;
+    }
+    .count-cell {
+        color: var(--text-dim);
+        font-size: 0.82rem;
+        text-align: center;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .badge::before {
+        content: '';
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .badge-pass {
+        background: rgba(0,184,148,0.12);
+        color: var(--pass);
+        border: 1px solid rgba(0,184,148,0.25);
+    }
+    .badge-pass::before { background: var(--pass); }
+    .badge-fail {
+        background: rgba(255,71,87,0.12);
+        color: var(--fail);
+        border: 1px solid rgba(255,71,87,0.25);
+    }
+    .badge-fail::before { background: var(--fail); }
+
+    .view-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        opacity: 0.7;
+        transition: opacity 0.15s;
+    }
+    .view-link:hover { opacity: 1; }
+
+    /* Mobile scan cards */
+    .mobile-scan-card {
+        display: block;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-dim);
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.12s;
+    }
+    .mobile-scan-card:last-child { border-bottom: none; }
+    .mobile-scan-card:hover { background: rgba(0,212,255,0.04); }
+    .mobile-scan-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .mobile-scan-badges {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* ── Empty state ───────────────────────────────── */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 72px 24px;
+        text-align: center;
+    }
+    .empty-icon-ring {
+        width: 72px; height: 72px;
+        border-radius: 50%;
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 24px;
+        color: var(--text-muted);
+    }
+    .empty-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+    .empty-body {
+        font-size: 0.875rem;
+        color: var(--text-dim);
+        max-width: 400px;
+        line-height: 1.6;
+        margin-bottom: 28px;
+    }
+    .terminal-block {
+        background: #000;
+        border: 1px solid rgba(0,212,255,0.2);
+        border-radius: 10px;
+        padding: 20px 24px;
+        text-align: left;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        line-height: 1.8;
+        min-width: 340px;
+        max-width: 500px;
+        box-shadow: 0 0 32px rgba(0,212,255,0.06);
+    }
+    .terminal-comment { color: #4a5568; }
+    .terminal-prompt { color: var(--accent); }
+    .terminal-cmd { color: #e2e8f0; }
+    .cursor-blink {
+        display: inline-block;
+        width: 7px; height: 13px;
+        background: var(--accent);
+        margin-left: 2px;
+        vertical-align: middle;
+        animation: blink 1.1s step-end infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+</style>
+
+<!-- ── Page header ─────────────────────────────── -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
     <div>
-        <h1 class="text-2xl font-bold">Security Dashboard</h1>
-        <p class="text-gray-500 mt-1">Overview of recent security scans and findings</p>
+        <h1 class="page-heading">Security Dashboard</h1>
+        <p class="page-sub">Overview of recent security scans and findings</p>
     </div>
 </div>
 
 {% if scans %}
-<!-- Summary cards -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="bg-white rounded-lg shadow p-5">
-        <p class="text-sm text-gray-500">Total Scans</p>
-        <p class="text-2xl font-bold mt-1">{{ scans|length }}</p>
+
+<!-- ── Stat cards ──────────────────────────────── -->
+<div class="stats-grid">
+    <div class="stat-card stat-accent-blue">
+        <svg class="stat-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <div class="stat-label">Total Scans</div>
+        <div class="stat-value">{{ scans|length }}</div>
+        <div class="stat-sub">last 20 shown</div>
     </div>
-    <div class="bg-white rounded-lg shadow p-5">
-        <p class="text-sm text-gray-500">Latest Scan</p>
-        <p class="text-lg font-semibold mt-1">{{ scans[0].hostname }}</p>
-        <p class="text-xs text-gray-400">{{ scans[0].scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+    <div class="stat-card stat-accent-blue">
+        <svg class="stat-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <div class="stat-label">Latest Target</div>
+        <div class="stat-value" style="font-size:1.2rem;letter-spacing:-0.02em;">{{ scans[0].hostname }}</div>
+        <div class="stat-sub">{{ scans[0].scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
     </div>
-    <div class="bg-white rounded-lg shadow p-5">
-        <p class="text-sm text-gray-500">Latest Passed</p>
-        <p class="text-2xl font-bold mt-1 text-green-600">{{ scans[0].passed_checks or 0 }}</p>
+    <div class="stat-card stat-accent-green">
+        <svg class="stat-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <div class="stat-label">Checks Passed</div>
+        <div class="stat-value" style="color:var(--pass);">{{ scans[0].passed_checks or 0 }}</div>
+        <div class="stat-sub">latest scan</div>
     </div>
-    <div class="bg-white rounded-lg shadow p-5">
-        <p class="text-sm text-gray-500">Latest Failed</p>
-        <p class="text-2xl font-bold mt-1 text-red-600">{{ scans[0].failed_checks or 0 }}</p>
+    <div class="stat-card stat-accent-red">
+        <svg class="stat-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div class="stat-label">Checks Failed</div>
+        <div class="stat-value" style="color:var(--fail);">{{ scans[0].failed_checks or 0 }}</div>
+        <div class="stat-sub">latest scan</div>
     </div>
 </div>
 
-<!-- Scans table -->
-<div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold">Recent Scans</h2>
+<!-- ── Scans table ─────────────────────────────── -->
+<div class="table-card">
+    <div class="table-card-header">
+        <span class="table-card-title">Recent Scans</span>
+        <span class="table-count-badge">{{ scans|length }} result{% if scans|length != 1 %}s{% endif %}</span>
     </div>
 
     <!-- Desktop table -->
-    <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="bg-gray-50 text-gray-600 text-sm">
+    <div class="hidden md:block" style="overflow-x:auto;">
+        <table class="scans-table">
+            <thead>
                 <tr>
-                    <th class="px-6 py-3 font-medium">Hostname</th>
-                    <th class="px-6 py-3 font-medium">Date</th>
-                    <th class="px-6 py-3 font-medium">OS</th>
-                    <th class="px-6 py-3 font-medium">Checks</th>
-                    <th class="px-6 py-3 font-medium">Passed</th>
-                    <th class="px-6 py-3 font-medium">Failed</th>
-                    <th class="px-6 py-3 font-medium">Actions</th>
+                    <th>Hostname</th>
+                    <th>Date</th>
+                    <th>OS</th>
+                    <th style="text-align:center;">Total</th>
+                    <th>Passed</th>
+                    <th>Failed</th>
+                    <th></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
+            <tbody>
                 {% for scan in scans %}
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 font-medium">{{ scan.hostname }}</td>
-                    <td class="px-6 py-4 text-gray-500">{{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td class="px-6 py-4 text-gray-500">
-                        {% if scan.os_name %}{{ scan.os_name }} {{ scan.os_version or '' }}{% else %}-{% endif %}
+                <tr onclick="window.location='{{ url_for('dashboard.view_scan', scan_id=scan.id) }}'">
+                    <td class="hostname-cell">{{ scan.hostname }}</td>
+                    <td class="date-cell">{{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="os-cell">
+                        {% if scan.os_name %}{{ scan.os_name }}{% if scan.os_version %} {{ scan.os_version }}{% endif %}{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
                     </td>
-                    <td class="px-6 py-4">{{ scan.total_checks or 0 }}</td>
-                    <td class="px-6 py-4">
-                        <span class="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">
-                            {{ scan.passed_checks or 0 }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="inline-block bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">
-                            {{ scan.failed_checks or 0 }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
-                           class="text-blue-600 hover:text-blue-800 font-medium text-sm transition">
-                            View Details
+                    <td class="count-cell">{{ scan.total_checks or 0 }}</td>
+                    <td><span class="badge badge-pass">{{ scan.passed_checks or 0 }}</span></td>
+                    <td><span class="badge badge-fail">{{ scan.failed_checks or 0 }}</span></td>
+                    <td>
+                        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}" class="view-link" onclick="event.stopPropagation()">
+                            View
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                            </svg>
                         </a>
                     </td>
                 </tr>
@@ -85,20 +390,19 @@
     </div>
 
     <!-- Mobile cards -->
-    <div class="md:hidden divide-y divide-gray-100">
+    <div class="md:hidden">
         {% for scan in scans %}
-        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
-           class="block px-4 py-4 hover:bg-gray-50 transition">
-            <div class="flex items-center justify-between">
-                <span class="font-medium">{{ scan.hostname }}</span>
-                <span class="text-xs text-gray-400">{{ scan.scan_timestamp.strftime('%Y-%m-%d') }}</span>
+        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}" class="mobile-scan-card">
+            <div class="mobile-scan-row">
+                <span style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.85rem;color:var(--text);">{{ scan.hostname }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-muted);">{{ scan.scan_timestamp.strftime('%Y-%m-%d') }}</span>
             </div>
-            <div class="flex items-center gap-3 mt-2 text-sm">
-                <span class="text-gray-500">
-                    {% if scan.os_name %}{{ scan.os_name }}{% else %}Unknown OS{% endif %}
-                </span>
-                <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">{{ scan.passed_checks or 0 }} passed</span>
-                <span class="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">{{ scan.failed_checks or 0 }} failed</span>
+            <div style="font-size:0.8rem;color:var(--text-dim);margin-top:4px;">
+                {% if scan.os_name %}{{ scan.os_name }}{% if scan.os_version %} {{ scan.os_version }}{% endif %}{% else %}Unknown OS{% endif %}
+            </div>
+            <div class="mobile-scan-badges">
+                <span class="badge badge-pass">{{ scan.passed_checks or 0 }} passed</span>
+                <span class="badge badge-fail">{{ scan.failed_checks or 0 }} failed</span>
             </div>
         </a>
         {% endfor %}
@@ -106,25 +410,29 @@
 </div>
 
 {% if scans|length >= 20 %}
-<p class="text-center text-gray-400 text-sm mt-4">Showing 20 most recent scans</p>
+<p style="text-align:center;color:var(--text-muted);font-size:0.78rem;margin-top:12px;font-family:'JetBrains Mono',monospace;">
+    Showing 20 most recent scans
+</p>
 {% endif %}
 
 {% else %}
-<!-- Empty state -->
-<div class="text-center py-20">
-    <svg class="mx-auto w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-    </svg>
-    <h2 class="text-xl font-semibold text-gray-700 mt-6">No scans yet</h2>
-    <p class="text-gray-500 mt-2 max-w-md mx-auto">
-        Run your first security scan to see results here. Install and run the PolarisGRC agent on a target Linux system.
-    </p>
-    <div class="mt-6 bg-gray-900 text-green-400 rounded-lg px-6 py-4 inline-block text-left font-mono text-sm">
-        <p class="text-gray-500"># Install and run the agent</p>
-        <p>$ pip install -e .</p>
-        <p>$ python -m agent --output scan_results.json</p>
+
+<!-- ── Empty state ─────────────────────────────── -->
+<div class="empty-state">
+    <div class="empty-icon-ring">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+    </div>
+    <div class="empty-heading">No scans yet</div>
+    <p class="empty-body">Run your first security scan to see results here. Install and run the PolarisGRC agent on a target Linux system.</p>
+    <div class="terminal-block">
+        <div class="terminal-comment"># Install and run the agent</div>
+        <div><span class="terminal-prompt">$ </span><span class="terminal-cmd">pip install -e .</span></div>
+        <div><span class="terminal-prompt">$ </span><span class="terminal-cmd">python -m agent --output scan_results.json</span></div>
+        <div><span class="terminal-prompt">$ </span><span class="cursor-blink"></span></div>
     </div>
 </div>
+
 {% endif %}
 {% endblock %}

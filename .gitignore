@@ -55,6 +55,7 @@ complete_scan.json
 entry_test.json
 linux_complete.json
 linux_priv.json
+wsl_priv_scan.json
 
 
 # Packaging artifacts
@@ -62,3 +63,5 @@ linux_priv.json
 
 #database
 polarisgrc.db
+
+test_ids.py

@@ -1,0 +1,206 @@
+{
+  "iso27001": {
+    "A.9.2.3": {
+      "title": "Management of privileged access rights",
+      "description": "The allocation and use of privileged access rights shall be restricted and controlled. Organizations should implement a formal authorization process for privileged access and ensure privileged accounts are only used when necessary.",
+      "category": "Access Control",
+      "domain": "User Access Management"
+    },
+    "A.9.2.5": {
+      "title": "Review of user access rights",
+      "description": "Asset owners shall review users' access rights at regular intervals. This ensures that users maintain appropriate access levels and that access is revoked when no longer needed.",
+      "category": "Access Control",
+      "domain": "User Access Management"
+    },
+    "A.9.2.6": {
+      "title": "Removal or adjustment of access rights",
+      "description": "The access rights of all employees and external party users to information and information processing facilities shall be removed upon termination of their employment, contract or agreement, or adjusted upon change.",
+      "category": "Access Control",
+      "domain": "User Access Management"
+    },
+    "A.9.4.1": {
+      "title": "Information access restriction",
+      "description": "Access to information and application system functions shall be restricted in accordance with the access control policy. Users should only have access to the services they have been specifically authorized to use.",
+      "category": "Access Control",
+      "domain": "User Responsibilities"
+    },
+    "A.9.4.2": {
+      "title": "Secure log-on procedures",
+      "description": "Where required by the access control policy, access to systems and applications shall be controlled by a secure log-on procedure. This includes implementing appropriate authentication mechanisms.",
+      "category": "Access Control",
+      "domain": "User Responsibilities"
+    },
+    "A.9.4.3": {
+      "title": "Password management system",
+      "description": "Password management systems shall be interactive and shall ensure quality passwords. This includes enforcing password complexity, length, history, and secure storage requirements.",
+      "category": "Access Control",
+      "domain": "User Responsibilities"
+    },
+    "A.9.4.5": {
+      "title": "Access control to program source code",
+      "description": "Access to program source code shall be restricted. This extends to protecting sensitive files, configuration data, and ensuring appropriate file permissions are maintained.",
+      "category": "Access Control",
+      "domain": "User Responsibilities"
+    },
+    "A.10.1.1": {
+      "title": "Policy on the use of cryptographic controls",
+      "description": "A policy on the use of cryptographic controls for protection of information shall be developed and implemented. This includes using strong cryptographic algorithms for password hashing and data protection.",
+      "category": "Cryptography",
+      "domain": "Cryptographic Controls"
+    },
+    "A.12.4.1": {
+      "title": "Event logging",
+      "description": "Event logs recording user activities, exceptions, faults and information security events shall be produced, kept and regularly reviewed. Audit logging is essential for detecting security incidents and meeting compliance obligations.",
+      "category": "Operations Security",
+      "domain": "Logging and Monitoring"
+    },
+    "A.12.4.2": {
+      "title": "Protection of log information",
+      "description": "Logging facilities and log information shall be protected against tampering and unauthorized access. Audit logs must be securely stored and protected from modification.",
+      "category": "Operations Security",
+      "domain": "Logging and Monitoring"
+    },
+    "A.12.4.3": {
+      "title": "Administrator and operator logs",
+      "description": "System administrator and system operator activities shall be logged and the logs protected and regularly reviewed. This is critical for accountability and detecting insider threats.",
+      "category": "Operations Security",
+      "domain": "Logging and Monitoring"
+    },
+    "A.12.6.1": {
+      "title": "Management of technical vulnerabilities",
+      "description": "Information about technical vulnerabilities of information systems being used shall be obtained in a timely manner, the organization's exposure to such vulnerabilities evaluated and appropriate measures taken to address the associated risk.",
+      "category": "Operations Security",
+      "domain": "Technical Vulnerability Management"
+    },
+    "A.12.6.2": {
+      "title": "Restrictions on software installation",
+      "description": "Rules governing the installation of software by users shall be established and implemented. Organizations should maintain systems with current patches and updates to address known vulnerabilities.",
+      "category": "Operations Security",
+      "domain": "Technical Vulnerability Management"
+    },
+    "A.13.1.1": {
+      "title": "Network controls",
+      "description": "Networks shall be managed and controlled to protect information in systems and applications. This includes implementing firewalls, network segmentation, and controlling network access points.",
+      "category": "Communications Security",
+      "domain": "Network Security Management"
+    },
+    "A.13.1.3": {
+      "title": "Segregation in networks",
+      "description": "Groups of information services, users and information systems shall be segregated on networks. Network isolation and access controls prevent unauthorized access and limit the impact of security breaches.",
+      "category": "Communications Security",
+      "domain": "Network Security Management"
+    },
+    "A.18.1.5": {
+      "title": "Regulation of cryptographic controls",
+      "description": "Cryptographic controls shall be used in compliance with all relevant agreements, legislation and regulations. This includes ensuring secure protocols and algorithms are used for network communications.",
+      "category": "Compliance",
+      "domain": "Compliance with Legal Requirements"
+    }
+  },
+  "gdpr": {
+    "Article 30": {
+      "title": "Records of processing activities",
+      "description": "Each controller and processor shall maintain a record of processing activities under its responsibility. Audit logging supports this requirement by providing evidence of data processing activities.",
+      "category": "Accountability and Governance",
+      "domain": "Documentation Requirements"
+    },
+    "Article 32(1)(a)": {
+      "title": "Security of processing - Pseudonymisation and encryption",
+      "description": "The pseudonymisation and encryption of personal data. Organizations must protect personal data using appropriate technical measures including strong encryption for data at rest and in transit.",
+      "category": "Security of Processing",
+      "domain": "Article 32 - Security Requirements"
+    },
+    "Article 32(1)(b)": {
+      "title": "Security of processing - Confidentiality, integrity, availability",
+      "description": "The ability to ensure the ongoing confidentiality, integrity, availability and resilience of processing systems and services. This encompasses access controls, system hardening, patch management, and security monitoring.",
+      "category": "Security of Processing",
+      "domain": "Article 32 - Security Requirements"
+    },
+    "Article 32(1)(d)": {
+      "title": "Security of processing - Testing and evaluation",
+      "description": "A process for regularly testing, assessing and evaluating the effectiveness of technical and organisational measures for ensuring the security of the processing. Audit logging enables security monitoring and incident detection.",
+      "category": "Security of Processing",
+      "domain": "Article 32 - Security Requirements"
+    }
+  },
+  "nist_csf": {
+    "PR.AC-1": {
+      "title": "Identities and credentials management",
+      "description": "Identities and credentials are issued, managed, verified, revoked, and audited for authorized devices, users and processes. This includes password policies, authentication mechanisms, and access credential lifecycle management.",
+      "category": "Protect (PR)",
+      "domain": "Access Control (PR.AC)"
+    },
+    "PR.AC-4": {
+      "title": "Access permissions and authorizations management",
+      "description": "Access permissions and authorizations are managed, incorporating the principles of least privilege and separation of duties. Privileged access must be carefully controlled and monitored.",
+      "category": "Protect (PR)",
+      "domain": "Access Control (PR.AC)"
+    },
+    "PR.AC-5": {
+      "title": "Network integrity protection",
+      "description": "Network integrity is protected (e.g., network segregation, network segmentation). Firewalls, network access controls, and secure protocols prevent unauthorized network access.",
+      "category": "Protect (PR)",
+      "domain": "Access Control (PR.AC)"
+    },
+    "PR.AC-7": {
+      "title": "Authentication and authorization of users",
+      "description": "Users, devices, and other assets are authenticated (e.g., single-factor, multi-factor) commensurate with the risk of the transaction. Strong authentication mechanisms like SSH keys are preferred over passwords.",
+      "category": "Protect (PR)",
+      "domain": "Access Control (PR.AC)"
+    },
+    "PR.DS-1": {
+      "title": "Data-at-rest protection",
+      "description": "Data-at-rest is protected. This includes using strong cryptographic hashing for stored credentials and ensuring sensitive data is encrypted when stored.",
+      "category": "Protect (PR)",
+      "domain": "Data Security (PR.DS)"
+    },
+    "PR.DS-5": {
+      "title": "Protections against data leaks",
+      "description": "Protections against data leaks are implemented. Proper file permissions prevent unauthorized access to sensitive files and configuration data.",
+      "category": "Protect (PR)",
+      "domain": "Data Security (PR.DS)"
+    },
+    "PR.IP-1": {
+      "title": "Baseline configuration and inventory",
+      "description": "A baseline configuration of information technology/industrial control systems is created and maintained incorporating security principles. This includes keeping systems updated with security patches.",
+      "category": "Protect (PR)",
+      "domain": "Information Protection Processes and Procedures (PR.IP)"
+    },
+    "PR.MA-1": {
+      "title": "Maintenance and repair",
+      "description": "Maintenance and repair of organizational assets are performed and logged, with approved and controlled tools. Regular system updates are a key maintenance activity for security.",
+      "category": "Protect (PR)",
+      "domain": "Maintenance (PR.MA)"
+    },
+    "PR.PT-1": {
+      "title": "Audit/log records determination",
+      "description": "Audit/log records are determined, documented, implemented, and reviewed in accordance with policy. Audit logging must be enabled and actively monitored.",
+      "category": "Protect (PR)",
+      "domain": "Protective Technology (PR.PT)"
+    },
+    "PR.PT-3": {
+      "title": "Principle of least functionality",
+      "description": "The principle of least functionality is incorporated by configuring systems to provide only essential capabilities. This includes avoiding privileged container configurations and unnecessary exposed services.",
+      "category": "Protect (PR)",
+      "domain": "Protective Technology (PR.PT)"
+    },
+    "PR.PT-4": {
+      "title": "Communications and control networks protection",
+      "description": "Communications and control networks are protected. Network access controls, firewall rules, and port restrictions prevent unauthorized network access.",
+      "category": "Protect (PR)",
+      "domain": "Protective Technology (PR.PT)"
+    },
+    "DE.AE-3": {
+      "title": "Event data aggregation and correlation",
+      "description": "Event data are collected and correlated from multiple sources and sensors. Audit logging provides the data necessary for security monitoring and incident detection.",
+      "category": "Detect (DE)",
+      "domain": "Anomalies and Events (DE.AE)"
+    },
+    "DE.CM-1": {
+      "title": "Network monitoring",
+      "description": "The network is monitored to detect potential cybersecurity events. Audit logs and security monitoring enable the detection of suspicious activities.",
+      "category": "Detect (DE)",
+      "domain": "Security Continuous Monitoring (DE.CM)"
+    }
+  }
+}

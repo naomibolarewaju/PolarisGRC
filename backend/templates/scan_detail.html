@@ -1,0 +1,668 @@
+{% extends "base.html" %}
+
+{% block title %}{{ scan.hostname }} — Scan Detail · PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+    /* ── Page-specific styles ──────────────────────── */
+    .page-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .page-sub {
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        margin-top: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .meta-sep { color: var(--border-dim); }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-dim);
+        font-size: 0.82rem;
+        text-decoration: none;
+        margin-bottom: 20px;
+        transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    /* privilege badge */
+    .badge-priv {
+        font-size: 0.68rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        padding: 2px 9px;
+        border-radius: 100px;
+    }
+    .badge-priv-yes {
+        background: rgba(255,165,2,0.12);
+        color: var(--warn);
+        border: 1px solid rgba(255,165,2,0.3);
+    }
+    .badge-priv-no {
+        background: rgba(88,101,128,0.15);
+        color: var(--text-muted);
+        border: 1px solid var(--border-dim);
+    }
+
+    /* ── Stat cards ────────────────────────────────── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+        margin-bottom: 28px;
+    }
+    @media (max-width: 1000px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px)  { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        padding: 18px;
+        position: relative;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeUp 0.4s ease forwards;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+    }
+    .stat-card:hover {
+        border-color: var(--border);
+        box-shadow: 0 0 0 1px var(--border), 0 4px 20px rgba(0,212,255,0.05);
+    }
+    .stat-card:nth-child(1) { animation-delay: 0.04s; }
+    .stat-card:nth-child(2) { animation-delay: 0.10s; }
+    .stat-card:nth-child(3) { animation-delay: 0.16s; }
+    .stat-card:nth-child(4) { animation-delay: 0.22s; }
+    .stat-card:nth-child(5) { animation-delay: 0.28s; }
+
+    .stat-accent-blue::before  { background: var(--accent); }
+    .stat-accent-green::before { background: var(--pass); }
+    .stat-accent-red::before   { background: var(--fail); }
+    .stat-accent-warn::before  { background: var(--warn); }
+    .stat-accent-dim::before   { background: var(--text-muted); }
+
+    .stat-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+    .stat-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.9rem;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+    }
+
+    @keyframes fadeUp {
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Badges ────────────────────────────────────── */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 100px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        white-space: nowrap;
+    }
+    .badge::before {
+        content: '';
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+    .badge-pass {
+        background: rgba(0,184,148,0.12);
+        color: var(--pass);
+        border: 1px solid rgba(0,184,148,0.25);
+    }
+    .badge-pass::before { background: var(--pass); }
+
+    .badge-fail {
+        background: rgba(255,71,87,0.12);
+        color: var(--fail);
+        border: 1px solid rgba(255,71,87,0.25);
+    }
+    .badge-fail::before { background: var(--fail); }
+
+    .badge-skip {
+        background: rgba(255,165,2,0.1);
+        color: var(--warn);
+        border: 1px solid rgba(255,165,2,0.25);
+    }
+    .badge-skip::before { background: var(--warn); }
+
+    .badge-error {
+        background: rgba(150,100,50,0.12);
+        color: #e07b39;
+        border: 1px solid rgba(200,120,60,0.3);
+    }
+    .badge-error::before { background: #e07b39; }
+
+    /* Severity */
+    .sev-high {
+        font-size: 0.68rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(255,71,87,0.1);
+        color: var(--fail);
+        border: 1px solid rgba(255,71,87,0.2);
+        white-space: nowrap;
+    }
+    .sev-medium {
+        font-size: 0.68rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(255,165,2,0.1);
+        color: var(--warn);
+        border: 1px solid rgba(255,165,2,0.2);
+        white-space: nowrap;
+    }
+    .sev-low {
+        font-size: 0.68rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(0,212,255,0.07);
+        color: var(--accent);
+        border: 1px solid rgba(0,212,255,0.15);
+        white-space: nowrap;
+    }
+    .sev-unknown {
+        font-size: 0.68rem;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border-dim);
+        white-space: nowrap;
+    }
+
+    /* ── Category sections ─────────────────────────── */
+    .category-section {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        margin-bottom: 16px;
+        overflow: hidden;
+        transition: border-color 0.15s;
+    }
+    .category-section:hover {
+        border-color: var(--border);
+    }
+
+    .category-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border-dim);
+        background: var(--surface2);
+    }
+    .category-name {
+        font-family: 'Syne', sans-serif;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .category-name::before {
+        content: '';
+        display: inline-block;
+        width: 3px;
+        height: 16px;
+        background: var(--accent);
+        border-radius: 2px;
+    }
+    .category-count {
+        font-size: 0.7rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-muted);
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        padding: 2px 9px;
+        border-radius: 100px;
+    }
+
+    /* ── Findings table ────────────────────────────── */
+    .findings-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.855rem;
+    }
+    .findings-table thead th {
+        padding: 9px 18px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        text-align: left;
+        border-bottom: 1px solid var(--border-dim);
+    }
+    .findings-table tbody tr {
+        border-bottom: 1px solid var(--border-dim);
+        transition: background 0.12s;
+    }
+    .findings-table tbody tr:last-child,
+    .findings-table tbody tr:last-child + tr { border-bottom: none; }
+    .findings-table tbody tr.finding-row:hover { background: rgba(0,212,255,0.03); }
+    .findings-table td {
+        padding: 13px 18px;
+        vertical-align: top;
+    }
+
+    .check-name {
+        font-weight: 600;
+        color: var(--text);
+        font-size: 0.865rem;
+        line-height: 1.3;
+    }
+    .check-id {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-top: 3px;
+    }
+    .finding-text {
+        color: var(--text-dim);
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+
+    /* Expandable remediation */
+    .remediation-row td {
+        padding: 0;
+        border-bottom: 1px solid var(--border-dim) !important;
+    }
+    details.remediation-details {
+        width: 100%;
+    }
+    details.remediation-details summary {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--accent);
+        list-style: none;
+        user-select: none;
+        border-top: 1px solid rgba(0,212,255,0.1);
+        background: rgba(0,212,255,0.03);
+        transition: background 0.12s;
+    }
+    details.remediation-details summary:hover {
+        background: rgba(0,212,255,0.06);
+    }
+    details.remediation-details summary::-webkit-details-marker { display: none; }
+    details.remediation-details summary::before {
+        content: '▶';
+        font-size: 0.6rem;
+        transition: transform 0.15s;
+        opacity: 0.7;
+    }
+    details.remediation-details[open] summary::before {
+        transform: rotate(90deg);
+    }
+    .remediation-body {
+        padding: 14px 20px 14px 28px;
+        background: var(--surface2);
+        border-top: 1px solid var(--border-dim);
+    }
+    .remediation-pre {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.7;
+        margin: 0;
+    }
+
+    /* Compliance tags */
+    .compliance-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+    }
+    .compliance-tag {
+        font-size: 0.65rem;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        color: var(--text-muted);
+    }
+    .compliance-tag-label {
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-right: 4px;
+        opacity: 0.7;
+    }
+
+    /* Skip reason */
+    .skip-reason {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-style: italic;
+        margin-top: 3px;
+    }
+
+    /* Mobile finding cards */
+    .mobile-finding-card {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border-dim);
+    }
+    .mobile-finding-card:last-child { border-bottom: none; }
+    .mobile-finding-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    .mobile-finding-badges {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+    }
+</style>
+
+<!-- ── Back link ────────────────────────────────── -->
+<a href="{{ url_for('dashboard.index') }}" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+    Back to Dashboard
+</a>
+
+<!-- ── Page header ─────────────────────────────── -->
+<div style="margin-bottom:28px;">
+    <h1 class="page-heading">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        {{ scan.hostname }}
+        {% if scan.privileged_mode %}
+            <span class="badge-priv badge-priv-yes">privileged</span>
+        {% else %}
+            <span class="badge-priv badge-priv-no">unprivileged</span>
+        {% endif %}
+    </h1>
+    <div class="page-sub">
+        <span>{{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+        {% if scan.os_name %}
+        <span class="meta-sep">·</span>
+        <span>{{ scan.os_name }}{% if scan.os_version %} {{ scan.os_version }}{% endif %}</span>
+        {% endif %}
+        {% if scan.agent_version %}
+        <span class="meta-sep">·</span>
+        <span>agent v{{ scan.agent_version }}</span>
+        {% endif %}
+        <span class="meta-sep">·</span>
+        <span style="color:var(--text-muted);font-size:0.72rem;">{{ scan.id }}</span>
+    </div>
+</div>
+
+<!-- ── Stat cards ──────────────────────────────── -->
+<div class="stats-grid">
+    <div class="stat-card stat-accent-blue">
+        <div class="stat-label">Total Checks</div>
+        <div class="stat-value">{{ status_counts.PASS + status_counts.FAIL + status_counts.SKIPPED + status_counts.ERROR }}</div>
+    </div>
+    <div class="stat-card stat-accent-green">
+        <div class="stat-label">Passed</div>
+        <div class="stat-value" style="color:var(--pass);">{{ status_counts.PASS }}</div>
+    </div>
+    <div class="stat-card stat-accent-red">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value" style="color:var(--fail);">{{ status_counts.FAIL }}</div>
+    </div>
+    <div class="stat-card stat-accent-warn">
+        <div class="stat-label">Skipped</div>
+        <div class="stat-value" style="color:var(--warn);">{{ status_counts.SKIPPED }}</div>
+    </div>
+    <div class="stat-card stat-accent-dim">
+        <div class="stat-label">Errors</div>
+        <div class="stat-value" style="color:var(--text-muted);">{{ status_counts.ERROR }}</div>
+    </div>
+</div>
+
+<!-- ── Findings grouped by category ────────────── -->
+{% if categories %}
+    <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        <h2 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:600;color:var(--text);">Findings</h2>
+        <span style="font-size:0.72rem;font-family:'JetBrains Mono',monospace;color:var(--text-muted);">{{ categories|length }} categor{{ 'y' if categories|length == 1 else 'ies' }}</span>
+    </div>
+
+    {% for category_name, findings in categories.items() %}
+    <div class="category-section">
+        <div class="category-header">
+            <span class="category-name">{{ category_name }}</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+                {# Mini status summary for this category #}
+                {% set ns = namespace(p=0, f=0, s=0, e=0) %}
+                {% for f in findings %}
+                    {% if f.status == 'PASS' %}{% set ns.p = ns.p + 1 %}
+                    {% elif f.status == 'FAIL' %}{% set ns.f = ns.f + 1 %}
+                    {% elif f.status == 'SKIPPED' %}{% set ns.s = ns.s + 1 %}
+                    {% elif f.status == 'ERROR' %}{% set ns.e = ns.e + 1 %}
+                    {% endif %}
+                {% endfor %}
+                {% if ns.p > 0 %}<span class="badge badge-pass">{{ ns.p }}</span>{% endif %}
+                {% if ns.f > 0 %}<span class="badge badge-fail">{{ ns.f }}</span>{% endif %}
+                {% if ns.s > 0 %}<span class="badge badge-skip">{{ ns.s }}</span>{% endif %}
+                {% if ns.e > 0 %}<span class="badge badge-error">{{ ns.e }}</span>{% endif %}
+                <span class="category-count">{{ findings|length }} check{{ 's' if findings|length != 1 }}</span>
+            </div>
+        </div>
+
+        <!-- Desktop table -->
+        <div class="hidden md:block" style="overflow-x:auto;">
+            <table class="findings-table">
+                <thead>
+                    <tr>
+                        <th style="width:30%;">Check</th>
+                        <th style="width:90px;">Status</th>
+                        <th style="width:90px;">Severity</th>
+                        <th>Finding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for finding in findings %}
+                    <tr class="finding-row">
+                        <td>
+                            <div class="check-name">{{ finding.name }}</div>
+                            <div class="check-id">{{ finding.check_id }}</div>
+                            {% if finding.cis_reference %}
+                            <div style="font-size:0.68rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:2px;">CIS {{ finding.cis_reference }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="vertical-align:middle;">
+                            {% if finding.status == 'PASS' %}
+                                <span class="badge badge-pass">PASS</span>
+                            {% elif finding.status == 'FAIL' %}
+                                <span class="badge badge-fail">FAIL</span>
+                            {% elif finding.status == 'SKIPPED' %}
+                                <span class="badge badge-skip">SKIP</span>
+                            {% else %}
+                                <span class="badge badge-error">ERROR</span>
+                            {% endif %}
+                        </td>
+                        <td style="vertical-align:middle;">
+                            {% if finding.severity == 'HIGH' %}
+                                <span class="sev-high">HIGH</span>
+                            {% elif finding.severity == 'MEDIUM' %}
+                                <span class="sev-medium">MED</span>
+                            {% elif finding.severity == 'LOW' %}
+                                <span class="sev-low">LOW</span>
+                            {% elif finding.severity %}
+                                <span class="sev-unknown">{{ finding.severity }}</span>
+                            {% else %}
+                                <span style="color:var(--text-muted);">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="finding-text">
+                                {{ finding.finding or '—' }}
+                                {% if finding.skip_reason %}
+                                <div class="skip-reason">{{ finding.skip_reason }}</div>
+                                {% endif %}
+                            </div>
+                            {% if finding.compliance_mappings %}
+                            <div class="compliance-tags">
+                                {% for framework, controls in finding.compliance_mappings.items() %}
+                                    {% for ctrl in controls %}
+                                    <span class="compliance-tag"><span class="compliance-tag-label">{{ framework }}</span>{{ ctrl }}</span>
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {# Expandable remediation row for FAIL findings #}
+                    {% if finding.status == 'FAIL' and finding.remediation %}
+                    <tr class="remediation-row">
+                        <td colspan="4">
+                            <details class="remediation-details">
+                                <summary>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                    Remediation guidance
+                                </summary>
+                                <div class="remediation-body">
+                                    <pre class="remediation-pre">{{ finding.remediation }}</pre>
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile cards -->
+        <div class="md:hidden">
+            {% for finding in findings %}
+            <div class="mobile-finding-card">
+                <div class="mobile-finding-top">
+                    <div>
+                        <div class="check-name">{{ finding.name }}</div>
+                        <div class="check-id">{{ finding.check_id }}{% if finding.cis_reference %} · CIS {{ finding.cis_reference }}{% endif %}</div>
+                    </div>
+                    {% if finding.status == 'PASS' %}
+                        <span class="badge badge-pass">PASS</span>
+                    {% elif finding.status == 'FAIL' %}
+                        <span class="badge badge-fail">FAIL</span>
+                    {% elif finding.status == 'SKIPPED' %}
+                        <span class="badge badge-skip">SKIP</span>
+                    {% else %}
+                        <span class="badge badge-error">ERR</span>
+                    {% endif %}
+                </div>
+                <div class="finding-text">{{ finding.finding or '—' }}</div>
+                {% if finding.skip_reason %}
+                <div class="skip-reason">{{ finding.skip_reason }}</div>
+                {% endif %}
+                <div class="mobile-finding-badges">
+                    {% if finding.severity == 'HIGH' %}
+                        <span class="sev-high">HIGH</span>
+                    {% elif finding.severity == 'MEDIUM' %}
+                        <span class="sev-medium">MED</span>
+                    {% elif finding.severity == 'LOW' %}
+                        <span class="sev-low">LOW</span>
+                    {% elif finding.severity %}
+                        <span class="sev-unknown">{{ finding.severity }}</span>
+                    {% endif %}
+                    {% if finding.compliance_mappings %}
+                        {% for framework, controls in finding.compliance_mappings.items() %}
+                            {% for ctrl in controls %}
+                            <span class="compliance-tag"><span class="compliance-tag-label">{{ framework }}</span>{{ ctrl }}</span>
+                            {% endfor %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% if finding.status == 'FAIL' and finding.remediation %}
+                <details class="remediation-details" style="margin-top:8px;border:1px solid var(--border-dim);border-radius:6px;overflow:hidden;">
+                    <summary style="border-radius:6px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        Remediation guidance
+                    </summary>
+                    <div class="remediation-body">
+                        <pre class="remediation-pre">{{ finding.remediation }}</pre>
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+{% else %}
+<!-- ── No findings state ────────────────────────── -->
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:72px 24px;text-align:center;">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--surface2);border:1px solid var(--border-dim);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--text-muted);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">No findings recorded</div>
+    <p style="font-size:0.875rem;color:var(--text-dim);max-width:380px;line-height:1.6;">This scan completed with no individual check results stored.</p>
+</div>
+{% endif %}
+
+{% endblock %}
