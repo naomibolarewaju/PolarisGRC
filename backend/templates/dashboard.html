@@ -366,7 +366,7 @@
             </thead>
             <tbody>
                 {% for scan in scans %}
-                <tr class="scan-row" data-href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"></tr>
+                <tr class="scan-row" data-href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}">
                     <td class="hostname-cell">{{ scan.hostname }}</td>
                     <td class="date-cell">{{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td class="os-cell">
@@ -435,4 +435,14 @@
 </div>
 
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.querySelectorAll('.scan-row').forEach(function(row) {
+        row.addEventListener('click', function() {
+            window.location = this.dataset.href;
+        });
+    });
+</script>
 {% endblock %}

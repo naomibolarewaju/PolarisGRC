@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+
+{% block title %}{{ framework_name }} Controls — PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+    /* ── Breadcrumb ────────────────────────────────── */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 20px;
+    }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb-sep { opacity: 0.4; }
+    .breadcrumb-current { color: var(--text-dim); }
+
+    .back-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        color: var(--text-dim); font-size: 0.82rem; text-decoration: none;
+        margin-bottom: 20px; transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    /* ── Page header ───────────────────────────────── */
+    .page-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.6rem; font-weight: 700; color: var(--text);
+        letter-spacing: -0.01em; line-height: 1.2;
+    }
+    .page-sub { font-size: 0.875rem; color: var(--text-muted); margin-top: 4px; }
+
+    /* ── Status summary card ───────────────────────── */
+    .summary-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        padding: 16px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .summary-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: var(--accent);
+    }
+    .summary-meta {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .summary-meta strong { color: var(--text-dim); }
+    .summary-pills {
+        display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    }
+    .sum-pill {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.72rem; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; padding: 4px 11px; border-radius: 100px;
+    }
+    .sum-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    .pill-satisfied { background: rgba(0,184,148,0.1); color: var(--pass); border: 1px solid rgba(0,184,148,0.25); }
+    .pill-satisfied::before { background: var(--pass); }
+    .pill-failed { background: rgba(255,71,87,0.1); color: var(--fail); border: 1px solid rgba(255,71,87,0.25); }
+    .pill-failed::before { background: var(--fail); }
+    .pill-na { background: rgba(88,101,128,0.12); color: var(--text-muted); border: 1px solid var(--border-dim); }
+    .pill-na::before { background: var(--text-muted); }
+
+    /* ── Toolbar (search + filters) ────────────────── */
+    .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .search-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 220px;
+    }
+    .search-wrap svg {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+    #control-search {
+        width: 100%;
+        padding: 9px 14px 9px 36px;
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 0.875rem;
+        font-family: 'DM Sans', sans-serif;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    #control-search::placeholder { color: var(--text-muted); }
+    #control-search:focus {
+        border-color: var(--border);
+        box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+    }
+
+    .filter-group {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .status-filter-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 7px 13px;
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 8px;
+        color: var(--text-dim);
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: 'DM Sans', sans-serif;
+    }
+    .status-filter-btn:hover { border-color: var(--border); color: var(--text); }
+    .status-filter-btn.active {
+        background: var(--accent-dim);
+        border-color: var(--border);
+        color: var(--accent);
+    }
+    .status-filter-btn.active-pass { background: rgba(0,184,148,0.1); border-color: rgba(0,184,148,0.3); color: var(--pass); }
+    .status-filter-btn.active-fail { background: rgba(255,71,87,0.1); border-color: rgba(255,71,87,0.3); color: var(--fail); }
+    .status-filter-btn.active-na   { background: rgba(88,101,128,0.1); border-color: var(--border-dim); color: var(--text-muted); }
+
+    /* ── Result count ──────────────────────────────── */
+    #result-count {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 14px;
+    }
+
+    /* ── Controls grid ─────────────────────────────── */
+    .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+    @media (max-width: 800px) { .controls-grid { grid-template-columns: 1fr; } }
+
+    /* ── Control card ──────────────────────────────── */
+    .control-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 10px;
+        padding: 16px 18px;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        cursor: pointer;
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.12s;
+        position: relative;
+        overflow: hidden;
+    }
+    .control-card:hover {
+        border-color: var(--border);
+        box-shadow: 0 0 0 1px var(--border), 0 4px 16px rgba(0,212,255,0.06);
+        background: rgba(0,212,255,0.02);
+    }
+
+    /* Coloured left-edge indicator per status */
+    .control-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        width: 3px;
+    }
+    .control-card[data-status="satisfied"]::before  { background: var(--pass); }
+    .control-card[data-status="failed"]::before     { background: var(--fail); }
+    .control-card[data-status="not_assessed"]::before { background: var(--border-dim); }
+    .control-card:not([data-status])::before { background: var(--border-dim); }
+
+    .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .control-id {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--accent);
+        letter-spacing: 0.03em;
+        line-height: 1;
+    }
+    .control-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.3;
+    }
+    .control-desc {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+    .card-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 2px;
+    }
+    .card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .card-tag {
+        font-size: 0.65rem;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        color: var(--text-muted);
+    }
+
+    /* Status badges */
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 0.68rem; font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 3px 9px; border-radius: 100px; white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .status-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+    .badge-satisfied { background: rgba(0,184,148,0.12); color: var(--pass); border: 1px solid rgba(0,184,148,0.25); }
+    .badge-satisfied::before { background: var(--pass); }
+    .badge-failed { background: rgba(255,71,87,0.12); color: var(--fail); border: 1px solid rgba(255,71,87,0.25); }
+    .badge-failed::before { background: var(--fail); }
+    .badge-not-assessed { background: rgba(88,101,128,0.1); color: var(--text-muted); border: 1px solid var(--border-dim); }
+    .badge-not-assessed::before { background: var(--text-muted); }
+
+    /* Arrow on hover */
+    .card-arrow {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        transition: color 0.15s, transform 0.15s;
+        flex-shrink: 0;
+    }
+    .control-card:hover .card-arrow { color: var(--accent); transform: translateX(3px); }
+
+    /* ── Empty / no-results state ──────────────────── */
+    #no-results {
+        display: none;
+        padding: 48px 24px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+    }
+    #no-results p {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-top: 8px;
+    }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+    .controls-grid { opacity: 0; transform: translateY(8px); animation: fadeUp 0.3s ease forwards; }
+</style>
+
+<!-- ── Breadcrumb ─────────────────────────────────── -->
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Home</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('dashboard.compliance_overview') }}">Compliance</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ framework_name }}</span>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">All Controls</span>
+</nav>
+
+<!-- ── Back link ──────────────────────────────────── -->
+<a href="{{ url_for('dashboard.compliance_overview') }}" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+    Back to Compliance Overview
+</a>
+
+<!-- ── Page header ─────────────────────────────────── -->
+<div style="margin-bottom:24px;">
+    <h1 class="page-heading">{{ framework_name }} Controls</h1>
+    <p class="page-sub">Complete list of {{ framework_name }} requirements — {{ controls | length }} controls</p>
+</div>
+
+<!-- ── Status summary (if scan available) ─────────── -->
+{% if scan and control_status %}
+{% set n_satisfied   = control_status.values() | select('equalto', 'satisfied')   | list | length %}
+{% set n_failed      = control_status.values() | select('equalto', 'failed')      | list | length %}
+{% set n_not_assessed = control_status.values() | select('equalto', 'not_assessed') | list | length %}
+<div class="summary-card">
+    <div class="summary-meta">
+        Based on scan of <strong>{{ scan.hostname }}</strong>
+        &nbsp;·&nbsp; {{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M UTC') }}
+    </div>
+    <div class="summary-pills">
+        <span class="sum-pill pill-satisfied">{{ n_satisfied }} satisfied</span>
+        <span class="sum-pill pill-failed">{{ n_failed }} failed</span>
+        <span class="sum-pill pill-na">{{ n_not_assessed }} not assessed</span>
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Toolbar ────────────────────────────────────── -->
+<div class="toolbar">
+    <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" id="control-search"
+               placeholder="Search by ID, title, or description…"
+               autocomplete="off" aria-label="Search controls">
+    </div>
+
+    {% if control_status %}
+    <div class="filter-group" role="group" aria-label="Filter by status">
+        <button class="status-filter-btn active" id="filter-all"
+                onclick="filterByStatus('all', this)">All</button>
+        <button class="status-filter-btn" id="filter-satisfied"
+                onclick="filterByStatus('satisfied', this)">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pass);"></span>
+            Satisfied
+        </button>
+        <button class="status-filter-btn" id="filter-failed"
+                onclick="filterByStatus('failed', this)">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--fail);"></span>
+            Failed
+        </button>
+        <button class="status-filter-btn" id="filter-not-assessed"
+                onclick="filterByStatus('not_assessed', this)">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text-muted);"></span>
+            Not Assessed
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Result count ────────────────────────────────── -->
+<div id="result-count">Showing <strong id="visible-count">{{ controls | length }}</strong> of {{ controls | length }} controls</div>
+
+<!-- ── Controls grid ──────────────────────────────── -->
+{% if controls %}
+<div class="controls-grid" id="controls-grid">
+    {% for control_id, info in controls.items() %}
+    {% set status = control_status[control_id] if control_status else None %}
+    <a class="control-card"
+       href="{{ url_for('dashboard.view_control', framework=framework, control_id=control_id) }}"
+       {% if status %}data-status="{{ status }}"{% endif %}
+       data-search="{{ (control_id ~ ' ' ~ info.title ~ ' ' ~ info.description ~ ' ' ~ (info.category or '') ~ ' ' ~ (info.domain or '')) | lower }}">
+
+        <div class="card-top">
+            <div>
+                <div class="control-id">{{ control_id }}</div>
+            </div>
+            {% if status == 'satisfied' %}
+                <span class="status-badge badge-satisfied">Satisfied</span>
+            {% elif status == 'failed' %}
+                <span class="status-badge badge-failed">Failed</span>
+            {% elif status == 'not_assessed' %}
+                <span class="status-badge badge-not-assessed">Not Assessed</span>
+            {% endif %}
+        </div>
+
+        <div class="control-title">{{ info.title }}</div>
+
+        {% if info.description %}
+        <div class="control-desc">
+            {{ info.description[:160] }}{% if info.description | length > 160 %}…{% endif %}
+        </div>
+        {% endif %}
+
+        <div class="card-bottom">
+            <div class="card-tags">
+                {% if info.category %}
+                <span class="card-tag">{{ info.category }}</span>
+                {% endif %}
+                {% if info.domain and info.domain != info.category %}
+                <span class="card-tag">{{ info.domain }}</span>
+                {% endif %}
+            </div>
+            <span class="card-arrow">→</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<div id="no-results">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text);font-size:1rem;">No controls match</div>
+    <p>Try a different search term or clear the filter.</p>
+</div>
+
+{% else %}
+<!-- Empty state — no controls loaded -->
+<div style="background:var(--surface);border:1px solid var(--border-dim);border-radius:12px;padding:64px 24px;text-align:center;">
+    <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">No controls available</div>
+    <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:20px;">The reference data for this framework could not be loaded.</p>
+    <a href="{{ url_for('dashboard.compliance_overview') }}" style="color:var(--accent);font-size:.875rem;">← Back to Compliance Overview</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var searchInput  = document.getElementById('control-search');
+    var cards        = Array.from(document.querySelectorAll('.control-card'));
+    var noResults    = document.getElementById('no-results');
+    var visibleCount = document.getElementById('visible-count');
+    var activeStatus = 'all';
+    var activeQuery  = '';
+
+    function applyFilters() {
+        var shown = 0;
+        cards.forEach(function (card) {
+            var matchesSearch = !activeQuery || card.dataset.search.includes(activeQuery);
+            var matchesStatus = activeStatus === 'all' || (card.dataset.status === activeStatus);
+            var visible = matchesSearch && matchesStatus;
+            card.style.display = visible ? '' : 'none';
+            if (visible) shown++;
+        });
+        visibleCount.textContent = shown;
+        noResults.style.display = shown === 0 ? 'block' : 'none';
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function (e) {
+            activeQuery = e.target.value.toLowerCase().trim();
+            applyFilters();
+        });
+    }
+
+    window.filterByStatus = function (status, btn) {
+        activeStatus = status;
+        applyFilters();
+
+        // Update active button styling
+        document.querySelectorAll('.status-filter-btn').forEach(function (b) {
+            b.classList.remove('active', 'active-pass', 'active-fail', 'active-na');
+        });
+        if (btn) {
+            btn.classList.add('active');
+            if (status === 'satisfied')   btn.classList.add('active-pass');
+            if (status === 'failed')      btn.classList.add('active-fail');
+            if (status === 'not_assessed') btn.classList.add('active-na');
+        }
+    };
+})();
+</script>
+{% endblock %}

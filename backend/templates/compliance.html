@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Framework Coverage — PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+    .page-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+    }
+    .page-sub {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    /* ── Breadcrumb ────────────────────────────────── */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 20px;
+    }
+    .breadcrumb a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.15s;
+    }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb-sep { opacity: 0.4; }
+    .breadcrumb-current { color: var(--text-dim); }
+
+    /* ── Framework grid ────────────────────────────── */
+    .framework-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 28px;
+    }
+    @media (max-width: 900px) { .framework-grid { grid-template-columns: 1fr; } }
+
+    /* ── Framework card ────────────────────────────── */
+    .fw-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeUp 0.45s ease forwards;
+    }
+    .fw-card:nth-child(1) { animation-delay: 0.05s; }
+    .fw-card:nth-child(2) { animation-delay: 0.14s; }
+    .fw-card:nth-child(3) { animation-delay: 0.23s; }
+    .fw-card:hover {
+        border-color: var(--border);
+        box-shadow: 0 0 0 1px var(--border), 0 4px 24px rgba(0,212,255,0.05);
+    }
+
+    .fw-card-header {
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid var(--border-dim);
+        background: var(--surface2);
+        position: relative;
+    }
+    .fw-card-header::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: var(--accent);
+    }
+    .fw-name {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+        cursor: default;
+    }
+    .fw-description {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+        line-height: 1.4;
+    }
+
+    .fw-card-body {
+        padding: 20px;
+        flex: 1;
+    }
+
+    /* Coverage percentage */
+    .coverage-pct {
+        font-family: 'Syne', sans-serif;
+        font-size: 2.6rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 12px;
+        letter-spacing: -0.02em;
+    }
+    .pct-green { color: var(--pass); }
+    .pct-warn  { color: var(--warn); }
+    .pct-red   { color: var(--fail); }
+
+    /* Progress bar */
+    .progress-track {
+        background: var(--surface2);
+        border-radius: 100px;
+        height: 8px;
+        overflow: hidden;
+        margin-bottom: 12px;
+        border: 1px solid var(--border-dim);
+    }
+    .progress-fill {
+        height: 100%;
+        border-radius: 100px;
+        transition: width 0.7s cubic-bezier(.4,0,.2,1);
+    }
+    .bar-green { background: var(--pass); box-shadow: 0 0 8px rgba(0,184,148,0.4); }
+    .bar-warn  { background: var(--warn); box-shadow: 0 0 8px rgba(255,165,2,0.35); }
+    .bar-red   { background: var(--fail); box-shadow: 0 0 8px rgba(255,71,87,0.35); }
+
+    /* Control count text */
+    .control-count {
+        font-size: 0.84rem;
+        color: var(--text-dim);
+        margin-bottom: 4px;
+    }
+    .control-count strong { color: var(--text); }
+
+    .scan-date-note {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+        margin-top: 10px;
+    }
+
+    /* Mini breakdown pills */
+    .breakdown {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+    }
+    .breakdown-pill {
+        font-size: 0.68rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 100px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .breakdown-pill::before {
+        content: '';
+        width: 5px; height: 5px;
+        border-radius: 50%;
+    }
+    .pill-pass {
+        background: rgba(0,184,148,0.1);
+        color: var(--pass);
+        border: 1px solid rgba(0,184,148,0.25);
+    }
+    .pill-pass::before { background: var(--pass); }
+    .pill-fail {
+        background: rgba(255,71,87,0.1);
+        color: var(--fail);
+        border: 1px solid rgba(255,71,87,0.25);
+    }
+    .pill-fail::before { background: var(--fail); }
+    .pill-na {
+        background: rgba(88,101,128,0.12);
+        color: var(--text-muted);
+        border: 1px solid var(--border-dim);
+    }
+    .pill-na::before { background: var(--text-muted); }
+
+    .fw-card-footer {
+        padding: 12px 20px;
+        border-top: 1px solid var(--border-dim);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+    .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--accent);
+        opacity: 0.7;
+        text-decoration: none;
+        cursor: pointer;
+        transition: opacity 0.15s;
+    }
+    .btn-ghost:hover { opacity: 1; }
+
+    /* ── Info bar ───────────────────────────────────── */
+    .info-bar {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        padding: 16px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .info-bar-meta {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .info-bar-meta strong { color: var(--text-dim); }
+    .info-bar-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .btn-accent {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        background: var(--accent-dim);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-accent:hover {
+        background: rgba(0,212,255,0.14);
+        border-color: var(--accent);
+    }
+    .btn-muted {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        border-radius: 8px;
+        color: var(--text-dim);
+        font-size: 0.82rem;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    /* ── Empty state ───────────────────────────────── */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 72px 24px;
+        text-align: center;
+    }
+    .empty-icon-ring {
+        width: 72px; height: 72px;
+        border-radius: 50%;
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 24px;
+        color: var(--text-muted);
+    }
+    .empty-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+    .empty-body {
+        font-size: 0.875rem;
+        color: var(--text-dim);
+        max-width: 420px;
+        line-height: 1.6;
+        margin-bottom: 28px;
+    }
+    .terminal-block {
+        background: #000;
+        border: 1px solid rgba(0,212,255,0.2);
+        border-radius: 10px;
+        padding: 18px 24px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        line-height: 1.8;
+        min-width: 340px;
+        max-width: 480px;
+        text-align: left;
+        box-shadow: 0 0 32px rgba(0,212,255,0.05);
+    }
+    .terminal-comment { color: #4a5568; }
+    .terminal-prompt  { color: var(--accent); }
+    .terminal-cmd     { color: #e2e8f0; }
+    .cursor-blink {
+        display: inline-block;
+        width: 7px; height: 13px;
+        background: var(--accent);
+        margin-left: 2px;
+        vertical-align: middle;
+        animation: blink 1.1s step-end infinite;
+    }
+
+    @keyframes fadeUp  { to { opacity: 1; transform: translateY(0); } }
+    @keyframes blink   { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+</style>
+
+<!-- ── Breadcrumb ─────────────────────────────────── -->
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Home</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Compliance</span>
+</nav>
+
+<!-- ── Page header ─────────────────────────────────── -->
+<div style="margin-bottom:28px;">
+    <h1 class="page-heading">Compliance Framework Coverage</h1>
+    <p class="page-sub">Technical control satisfaction derived from the most recent security scan</p>
+</div>
+
+{% if scan and compliance_data %}
+
+<!-- ── Framework cards ─────────────────────────────── -->
+<div class="framework-grid">
+
+    {% set fw_order = [
+        ('iso27001', 'ISO 27001',
+         'International standard for information security management systems',
+         'A.9.2.3'),
+        ('gdpr', 'GDPR',
+         'EU regulation for data protection and privacy',
+         'Article 32'),
+        ('nist_csf', 'NIST CSF',
+         'US framework for improving cybersecurity posture',
+         'PR.AC'),
+    ] %}
+
+    {% for fw_key, fw_name, fw_desc, fw_example in fw_order %}
+    {% set fw = compliance_data[fw_key] %}
+
+    {% if fw.coverage_percent >= 80 %}
+        {% set pct_cls = 'pct-green' %}{% set bar_cls = 'bar-green' %}
+    {% elif fw.coverage_percent >= 50 %}
+        {% set pct_cls = 'pct-warn' %}{% set bar_cls = 'bar-warn' %}
+    {% else %}
+        {% set pct_cls = 'pct-red' %}{% set bar_cls = 'bar-red' %}
+    {% endif %}
+
+    <div class="fw-card">
+        <div class="fw-card-header">
+            <div class="fw-name"
+                 title="{{ fw_desc }}. Example control: {{ fw_example }}">
+                {{ fw_name }}
+            </div>
+            <div class="fw-description">{{ fw_desc }}</div>
+        </div>
+
+        <div class="fw-card-body">
+            <div class="coverage-pct {{ pct_cls }}">{{ fw.coverage_percent }}%</div>
+
+            <div class="progress-track" title="{{ fw.coverage_percent }}% of controls satisfied">
+                <div class="progress-fill {{ bar_cls }}"
+                     style="width: {{ fw.coverage_percent }}%"></div>
+            </div>
+
+            <p class="control-count">
+                <strong>{{ fw.satisfied }}</strong> of
+                <strong>{{ fw.total_controls }}</strong> controls satisfied
+            </p>
+
+            <div class="breakdown">
+                <span class="breakdown-pill pill-pass">{{ fw.satisfied }} satisfied</span>
+                <span class="breakdown-pill pill-fail">{{ fw.failed }} failed</span>
+                <span class="breakdown-pill pill-na">{{ fw.not_assessed }} not assessed</span>
+            </div>
+
+            {% if last_scan_date %}
+            <p class="scan-date-note">Based on scan from {{ last_scan_date.strftime('%Y-%m-%d %H:%M') }}</p>
+            {% endif %}
+        </div>
+
+        <div class="fw-card-footer">
+            <a href="{{ url_for('dashboard.list_framework_controls', framework=fw_key) }}"
+               class="btn-ghost" style="cursor:pointer;">
+                View all controls
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ── Info bar ─────────────────────────────────────── -->
+<div class="info-bar">
+    <div class="info-bar-meta">
+        <strong>Last updated:</strong>
+        {{ last_scan_date.strftime('%Y-%m-%d %H:%M UTC') if last_scan_date else '—' }}
+        &nbsp;·&nbsp;
+        Host: <strong>{{ scan.hostname }}</strong>
+        {% if scan.os_name %}&nbsp;·&nbsp; {{ scan.os_name }}{% if scan.os_version %} {{ scan.os_version }}{% endif %}{% endif %}
+    </div>
+    <div class="info-bar-actions">
+        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}" class="btn-accent">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            View Full Scan Details
+        </a>
+        <span class="btn-muted" title="Coming soon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Run New Assessment
+        </span>
+    </div>
+</div>
+
+{% else %}
+
+<!-- ── Empty state ───────────────────────────────────── -->
+<div style="background:var(--surface);border:1px solid var(--border-dim);border-radius:12px;overflow:hidden;">
+    <div class="empty-state">
+        <div class="empty-icon-ring">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+        </div>
+        <div class="empty-heading">No scans available</div>
+        <p class="empty-body">Run your first security scan to see compliance framework coverage. Install and run the PolarisGRC agent on a target Linux system.</p>
+        <div class="terminal-block">
+            <div class="terminal-comment"># Install and run the agent</div>
+            <div><span class="terminal-prompt">$ </span><span class="terminal-cmd">pip install -e .</span></div>
+            <div><span class="terminal-prompt">$ </span><span class="terminal-cmd">polaris-agent --output scan.json</span></div>
+            <div><span class="terminal-prompt">$ </span><span class="cursor-blink"></span></div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}

@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Assessment Wizard — PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+    .breadcrumb {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 0.78rem; color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace; margin-bottom: 20px;
+    }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb-sep { opacity: 0.4; }
+    .breadcrumb-current { color: var(--text-dim); }
+
+    .page-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.6rem; font-weight: 700; color: var(--text);
+        letter-spacing: -0.01em; line-height: 1.2;
+    }
+    .page-sub { font-size: 0.875rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6; }
+
+    /* ── Scan context card ─────────────────────────── */
+    .context-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 10px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 28px;
+        font-size: 0.82rem;
+        color: var(--text-dim);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .context-card svg { color: var(--accent); flex-shrink: 0; }
+    .context-card strong { color: var(--text); }
+
+    /* ── Form layout ───────────────────────────────── */
+    .wizard-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 720px;
+    }
+
+    /* ── Form section card ─────────────────────────── */
+    .form-section {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(8px);
+        animation: fadeUp 0.4s ease forwards;
+    }
+    .form-section:nth-child(1) { animation-delay: 0.04s; }
+    .form-section:nth-child(2) { animation-delay: 0.10s; }
+    .form-section:nth-child(3) { animation-delay: 0.16s; }
+    .form-section:nth-child(4) { animation-delay: 0.22s; }
+    .form-section:nth-child(5) { animation-delay: 0.28s; }
+
+    .form-section-header {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border-dim);
+        background: var(--surface2);
+        position: relative;
+    }
+    .form-section-header::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: var(--accent);
+    }
+    .form-section-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 0.9rem; font-weight: 700; color: var(--text);
+        display: flex; align-items: center; gap: 8px;
+    }
+    .form-section-body { padding: 20px; }
+
+    /* ── Text input ────────────────────────────────── */
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .field-label {
+        font-size: 0.84rem; font-weight: 600; color: var(--text);
+    }
+    .field-label .req { color: var(--fail); margin-left: 2px; }
+    .field-input {
+        padding: 10px 14px;
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 0.875rem;
+        font-family: 'DM Sans', sans-serif;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        width: 100%;
+    }
+    .field-input::placeholder { color: var(--text-muted); }
+    .field-input:focus {
+        border-color: var(--border);
+        box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+    }
+    .field-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6882' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 36px;
+        cursor: pointer;
+    }
+    .field-help {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    /* ── Radio / checkbox options ──────────────────── */
+    .option-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .option-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 14px;
+        border: 1px solid var(--border-dim);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.12s;
+    }
+    .option-item:hover {
+        border-color: var(--border);
+        background: rgba(0,212,255,0.03);
+    }
+    .option-item input[type="radio"],
+    .option-item input[type="checkbox"] {
+        margin-top: 2px;
+        flex-shrink: 0;
+        accent-color: var(--accent);
+        width: 15px; height: 15px;
+        cursor: pointer;
+    }
+    .option-item:has(input:checked) {
+        border-color: rgba(0,212,255,0.4);
+        background: rgba(0,212,255,0.05);
+    }
+    .option-label { font-size: 0.875rem; color: var(--text); font-weight: 500; }
+    .option-desc  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
+    /* Two-column checkboxes on wide screens */
+    .option-list-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    @media (max-width: 600px) { .option-list-grid { grid-template-columns: 1fr; } }
+
+    /* ── Example card ──────────────────────────────── */
+    .example-card {
+        background: rgba(0,212,255,0.04);
+        border: 1px solid rgba(0,212,255,0.12);
+        border-radius: 10px;
+        padding: 14px 18px;
+        font-size: 0.82rem;
+        color: var(--text-dim);
+        line-height: 1.6;
+        display: flex;
+        gap: 10px;
+    }
+    .example-card svg { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Submit button ─────────────────────────────── */
+    .btn-submit {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 13px 24px;
+        background: var(--accent);
+        border: none;
+        border-radius: 10px;
+        color: #000;
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-submit:hover { opacity: 0.9; }
+    .btn-submit:active { transform: scale(0.99); }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<!-- ── Breadcrumb ─────────────────────────────────── -->
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Home</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Risk Assessment</span>
+</nav>
+
+<!-- ── Page header ─────────────────────────────────── -->
+<div style="margin-bottom:24px;max-width:720px;">
+    <h1 class="page-heading">Organisational Risk Assessment</h1>
+    <p class="page-sub">
+        This wizard calculates your organisation's security risk score by combining
+        technical findings from your most recent scan with organisational context.
+        The result helps prioritise remediation efforts.
+    </p>
+</div>
+
+<!-- ── Scan context ───────────────────────────────── -->
+<div class="context-card">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+    </svg>
+    <span>
+        Scan from <strong>{{ scan.hostname }}</strong>
+        on {{ scan.scan_timestamp.strftime('%Y-%m-%d %H:%M UTC') }}
+        &nbsp;·&nbsp;
+        <strong>{{ scan.total_checks or 0 }}</strong> checks
+        &nbsp;(<strong style="color:var(--fail);">{{ scan.failed_checks or 0 }}</strong> failed,
+        <strong style="color:var(--warn);">{{ scan.skipped_checks or 0 }}</strong> skipped)
+    </span>
+</div>
+
+<!-- ── Wizard form ────────────────────────────────── -->
+<form method="POST" action="{{ url_for('dashboard.risk_assessment') }}"
+      class="wizard-form" novalidate>
+
+    <!-- Section 1: Organisation name -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <div class="form-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:.8;">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Organisation Information
+            </div>
+        </div>
+        <div class="form-section-body">
+            <div class="field-group">
+                <label class="field-label" for="org_name">
+                    Organisation Name <span class="req">*</span>
+                </label>
+                <input class="field-input" type="text" id="org_name" name="org_name"
+                       required maxlength="200"
+                       placeholder="e.g. Acme Corporation"
+                       value="{{ request.form.get('org_name', '') }}">
+                <p class="field-help">Your company or organisation name. Used only to personalise the report.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Organisation size -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <div class="form-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:.8;">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Organisation Size
+            </div>
+        </div>
+        <div class="form-section-body">
+            <div class="field-group">
+                <label class="field-label">
+                    How many employees does your organisation have? <span class="req">*</span>
+                </label>
+                <div class="option-list" role="radiogroup">
+                    <label class="option-item">
+                        <input type="radio" name="size" value="small" required
+                               {% if request.form.get('size') == 'small' %}checked{% endif %}>
+                        <div>
+                            <div class="option-label">Small — fewer than 50 employees</div>
+                            <div class="option-desc">Typically lower regulatory burden but may have limited security resources.</div>
+                        </div>
+                    </label>
+                    <label class="option-item">
+                        <input type="radio" name="size" value="medium"
+                               {% if request.form.get('size', 'medium') == 'medium' %}checked{% endif %}>
+                        <div>
+                            <div class="option-label">Medium — 50 to 250 employees</div>
+                            <div class="option-desc">Broader attack surface and increased compliance obligations.</div>
+                        </div>
+                    </label>
+                    <label class="option-item">
+                        <input type="radio" name="size" value="large"
+                               {% if request.form.get('size') == 'large' %}checked{% endif %}>
+                        <div>
+                            <div class="option-label">Large — more than 250 employees</div>
+                            <div class="option-desc">Complex infrastructure and highest regulatory scrutiny.</div>
+                        </div>
+                    </label>
+                </div>
+                <p class="field-help">Larger organisations typically face higher penalties for security incidents.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Industry -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <div class="form-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:.8;">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                </svg>
+                Industry Sector
+            </div>
+        </div>
+        <div class="form-section-body">
+            <div class="field-group">
+                <label class="field-label" for="industry">
+                    What industry are you in? <span class="req">*</span>
+                </label>
+                <select class="field-input field-select" id="industry" name="industry" required>
+                    <option value="" disabled {% if not request.form.get('industry') %}selected{% endif %}>Select your industry…</option>
+                    {% for opt, label in [
+                        ('healthcare',    'Healthcare'),
+                        ('finance',       'Finance &amp; Banking'),
+                        ('technology',    'Technology'),
+                        ('retail',        'Retail &amp; E-Commerce'),
+                        ('manufacturing', 'Manufacturing'),
+                        ('education',     'Education'),
+                        ('government',    'Government &amp; Public Sector'),
+                        ('other',         'Other'),
+                    ] %}
+                    <option value="{{ opt }}"
+                            {% if request.form.get('industry') == opt %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="field-help">Healthcare and finance sectors attract a higher risk multiplier due to stricter regulations (HIPAA, PCI-DSS, etc.).</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: Data types -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <div class="form-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:.8;">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                </svg>
+                Data Types Processed
+            </div>
+        </div>
+        <div class="form-section-body">
+            <div class="field-group">
+                <label class="field-label">What types of data does your organisation process?</label>
+                <div class="option-list-grid" role="group">
+                    {% for val, label, desc in [
+                        ('pii',           'Personally Identifiable Information (PII)', 'Names, addresses, national ID numbers, etc.'),
+                        ('financial',     'Financial data',                             'Bank accounts, invoices, revenue figures.'),
+                        ('health',        'Health records (PHI)',                       'Medical history, diagnoses, prescriptions.'),
+                        ('payment_card',  'Payment card data (PCI)',                    'Card numbers, CVVs, cardholder data.'),
+                        ('ip',            'Intellectual property',                      'Trade secrets, source code, proprietary research.'),
+                        ('other',         'Other sensitive data',                       'Anything not covered above.'),
+                    ] %}
+                    <label class="option-item">
+                        <input type="checkbox" name="data_types" value="{{ val }}"
+                               {% if val in (request.form.getlist('data_types') or []) %}checked{% endif %}>
+                        <div>
+                            <div class="option-label">{{ label }}</div>
+                            <div class="option-desc">{{ desc }}</div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                <p class="field-help">Select all that apply. This information is for contextual awareness and is not factored into the numerical score.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 5: Data sensitivity -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <div class="form-section-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:.8;">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Data Sensitivity Level
+            </div>
+        </div>
+        <div class="form-section-body">
+            <div class="field-group">
+                <label class="field-label">
+                    Overall data sensitivity level <span class="req">*</span>
+                </label>
+                <div class="option-list" role="radiogroup">
+                    {% for val, label, desc in [
+                        ('low',      'Low',      'Public or non-sensitive information — no significant regulatory exposure.'),
+                        ('medium',   'Medium',   'Internal business data — moderate impact if disclosed.'),
+                        ('high',     'High',     'Confidential customer or employee data — serious impact if breached.'),
+                        ('critical', 'Critical', 'Highly regulated or mission-critical data — maximum regulatory and reputational impact.'),
+                    ] %}
+                    <label class="option-item">
+                        <input type="radio" name="data_sensitivity" value="{{ val }}" required
+                               {% if request.form.get('data_sensitivity', 'medium') == val %}checked{% endif %}>
+                        <div>
+                            <div class="option-label">{{ label }}</div>
+                            <div class="option-desc">{{ desc }}</div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                <p class="field-help">Select the <em>highest</em> sensitivity level that applies to any data your organisation handles.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Example scenario -->
+    <div class="example-card">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>
+            <strong style="color:var(--text);">Example:</strong>
+            A small technology company processing customer PII and financial data with medium data sensitivity
+            would typically receive a medium risk score, rising to high if SSH root login or firewall checks are failing.
+        </span>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit" class="btn-submit">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        Calculate Risk Score
+    </button>
+
+</form>
+{% endblock %}

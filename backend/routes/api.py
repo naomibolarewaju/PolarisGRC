@@ -8,6 +8,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from backend import db
 from backend.models import Finding, Scan
+from backend.services.compliance_service import ComplianceService
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +129,26 @@ def get_scans():
 
 @api_bp.route("/scans/<scan_id>", methods=["GET"])
 def get_scan_detail(scan_id: str):
-    #retrieve detailed results for a single scan including all findings
+    """Retrieve detailed results for a single scan including all findings.
+
+    Response JSON includes:
+
+    * **findings** — list of individual check results.
+    * **compliance_summary** — per-framework control coverage derived from
+      the findings, with the following structure for each framework
+      (``iso27001``, ``gdpr``, ``nist_csf``)::
+
+          {
+            "total_controls":  int,   # controls defined in reference data
+            "satisfied":       int,   # controls with >= 1 PASS finding
+            "failed":          int,   # controls with FAIL (and no PASS)
+            "not_assessed":    int,   # controls with no findings or SKIP/ERROR only
+            "coverage_percent": float # satisfied / total * 100, 1 d.p.
+          }
+
+    If the compliance service is unavailable ``compliance_summary`` will be
+    an empty dict ``{}``.
+    """
     try:
         scan = db.session.get(Scan, scan_id)
         if scan is None:
@@ -154,6 +174,8 @@ def get_scan_detail(scan_id: str):
                 "compliance_mappings": f.compliance_mappings,
             })
 
+        compliance_summary = _build_compliance_summary(scan.findings)
+
         return jsonify({
             "scan_id": scan.id,
             "hostname": scan.hostname,
@@ -171,6 +193,7 @@ def get_scan_detail(scan_id: str):
                 "errors": scan.error_checks,
             },
             "findings": findings,
+            "compliance_summary": compliance_summary,
             "risk_score": scan.risk_score,
         })
 
@@ -180,3 +203,60 @@ def get_scan_detail(scan_id: str):
             "status": "error",
             "message": "Internal server error while retrieving scan details",
         }), 500
+
+
+def _build_compliance_summary(findings: list) -> dict:
+    """Calculate per-framework compliance coverage from a list of Finding rows.
+
+    For each framework control defined in the reference data:
+
+    * **satisfied** — at least one finding mapping to this control has PASS status.
+    * **failed** — at least one finding has FAIL status and none have PASS.
+    * **not_assessed** — no findings map to this control, or all are SKIPPED/ERROR.
+
+    Args:
+        findings: SQLAlchemy Finding model instances (must have ``status`` and
+                  ``compliance_mappings`` attributes).
+
+    Returns:
+        Dict keyed by framework name, or an empty dict if the service fails.
+    """
+    try:
+        service = ComplianceService()
+        summary: dict = {}
+
+        for framework in ("iso27001", "gdpr", "nist_csf"):
+            controls = service.get_all_controls_for_framework(framework)
+            satisfied = 0
+            failed = 0
+            not_assessed = 0
+
+            for control_id in controls:
+                # Collect statuses from all findings that reference this control
+                statuses = [
+                    f.status
+                    for f in findings
+                    if control_id in (f.compliance_mappings or {}).get(framework, [])
+                ]
+
+                if not statuses or all(s in ("SKIPPED", "ERROR") for s in statuses):
+                    not_assessed += 1
+                elif "PASS" in statuses:
+                    satisfied += 1
+                else:  # FAIL present, no PASS
+                    failed += 1
+
+            total = len(controls)
+            summary[framework] = {
+                "total_controls": total,
+                "satisfied": satisfied,
+                "failed": failed,
+                "not_assessed": not_assessed,
+                "coverage_percent": round(satisfied / total * 100, 1) if total else 0.0,
+            }
+
+        return summary
+
+    except Exception as exc:
+        logger.error("Failed to calculate compliance summary: %s", exc)
+        return {}

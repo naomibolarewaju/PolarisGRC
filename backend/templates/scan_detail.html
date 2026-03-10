@@ -376,6 +376,13 @@
         background: var(--surface);
         border: 1px solid var(--border-dim);
         color: var(--text-muted);
+        text-decoration: none;
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    a.compliance-tag:hover {
+        border-color: rgba(0,212,255,0.35);
+        color: var(--accent);
+        background: rgba(0,212,255,0.06);
     }
     .compliance-tag-label {
         font-size: 0.62rem;
@@ -562,7 +569,11 @@
                             <div class="compliance-tags">
                                 {% for framework, controls in finding.compliance_mappings.items() %}
                                     {% for ctrl in controls %}
-                                    <span class="compliance-tag"><span class="compliance-tag-label">{{ framework }}</span>{{ ctrl }}</span>
+                                    <a class="compliance-tag"
+                                       href="{{ url_for('dashboard.view_control', framework=framework, control_id=ctrl) }}"
+                                       title="Click to learn more about this compliance requirement">
+                                        <span class="compliance-tag-label">{{ framework }}</span>{{ ctrl }}
+                                    </a>
                                     {% endfor %}
                                 {% endfor %}
                             </div>
@@ -628,7 +639,11 @@
                     {% if finding.compliance_mappings %}
                         {% for framework, controls in finding.compliance_mappings.items() %}
                             {% for ctrl in controls %}
-                            <span class="compliance-tag"><span class="compliance-tag-label">{{ framework }}</span>{{ ctrl }}</span>
+                            <a class="compliance-tag"
+                               href="{{ url_for('dashboard.view_control', framework=framework, control_id=ctrl) }}"
+                               title="Click to learn more about this compliance requirement">
+                                <span class="compliance-tag-label">{{ framework }}</span>{{ ctrl }}
+                            </a>
                             {% endfor %}
                         {% endfor %}
                     {% endif %}

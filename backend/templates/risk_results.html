@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Assessment Results — PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+    .breadcrumb {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 0.78rem; color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace; margin-bottom: 20px;
+    }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb-sep { opacity: 0.4; }
+    .breadcrumb-current { color: var(--text-dim); }
+
+    /* ── Card base ─────────────────────────────────── */
+    .result-card {
+        background: var(--surface);
+        border: 1px solid var(--border-dim);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 18px;
+        opacity: 0;
+        transform: translateY(8px);
+        animation: fadeUp 0.4s ease forwards;
+    }
+    .result-card:nth-child(1) { animation-delay: 0.04s; }
+    .result-card:nth-child(2) { animation-delay: 0.11s; }
+    .result-card:nth-child(3) { animation-delay: 0.18s; }
+    .result-card:nth-child(4) { animation-delay: 0.25s; }
+    .result-card:nth-child(5) { animation-delay: 0.32s; }
+    .result-card:nth-child(6) { animation-delay: 0.39s; }
+
+    .card-header {
+        padding: 14px 22px;
+        border-bottom: 1px solid var(--border-dim);
+        background: var(--surface2);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .card-header::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: var(--accent);
+    }
+    .card-header.danger::before  { background: var(--fail); }
+    .card-header.warning::before { background: var(--warn); }
+    .card-header.success::before { background: var(--pass); }
+
+    .card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 0.9rem; font-weight: 700; color: var(--text);
+        display: flex; align-items: center; gap: 8px;
+    }
+    .card-body { padding: 22px; }
+
+    /* ── Score hero ────────────────────────────────── */
+    .score-hero-inner {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+        flex-wrap: wrap;
+    }
+    .score-dial { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .score-number {
+        font-family: 'Syne', sans-serif;
+        font-size: 5rem; font-weight: 800;
+        line-height: 1; letter-spacing: -0.05em;
+    }
+    .score-low    { color: var(--pass); }
+    .score-medium { color: var(--warn); }
+    .score-high   { color: var(--fail); }
+
+    .score-out-of { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-muted); }
+
+    .level-badge {
+        font-family: 'Syne', sans-serif;
+        font-size: 0.78rem; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        padding: 4px 16px; border-radius: 100px;
+    }
+    .badge-low    { background: rgba(0,184,148,0.12); color: var(--pass); border: 1px solid rgba(0,184,148,0.3); }
+    .badge-medium { background: rgba(255,165,2,0.12);  color: var(--warn); border: 1px solid rgba(255,165,2,0.3); }
+    .badge-high   { background: rgba(255,71,87,0.12);  color: var(--fail); border: 1px solid rgba(255,71,87,0.3); }
+
+    .score-details { flex: 1; min-width: 200px; }
+    .score-heading {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.1rem; font-weight: 700; color: var(--text);
+        margin-bottom: 8px;
+    }
+    .score-body { font-size: 0.875rem; color: var(--text-dim); line-height: 1.65; }
+
+    .score-bar-track {
+        margin-top: 16px;
+        background: var(--surface2); border-radius: 100px;
+        height: 10px; overflow: hidden; border: 1px solid var(--border-dim);
+    }
+    .score-bar-fill { height: 100%; border-radius: 100px; transition: width 0.9s cubic-bezier(.4,0,.2,1); }
+    .bar-low    { background: var(--pass); box-shadow: 0 0 8px rgba(0,184,148,0.4); }
+    .bar-medium { background: var(--warn); box-shadow: 0 0 8px rgba(255,165,2,0.4); }
+    .bar-high   { background: var(--fail); box-shadow: 0 0 8px rgba(255,71,87,0.4); }
+
+    /* ── Context recap ─────────────────────────────── */
+    .context-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    @media (max-width: 600px) { .context-grid { grid-template-columns: 1fr; } }
+
+    .context-item { display: flex; flex-direction: column; gap: 3px; }
+    .context-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+    .context-value { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+
+    .data-tag {
+        display: inline-block; font-size: 0.65rem;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 2px 8px; border-radius: 4px;
+        background: var(--surface2); border: 1px solid var(--border-dim);
+        color: var(--text-muted); margin: 2px;
+    }
+
+    /* ── Top risks ─────────────────────────────────── */
+    .risk-item {
+        padding: 14px 0;
+        border-bottom: 1px solid var(--border-dim);
+    }
+    .risk-item:last-child { border-bottom: none; }
+    .risk-item-top {
+        display: flex; align-items: flex-start;
+        justify-content: space-between; gap: 10px;
+        margin-bottom: 4px;
+    }
+    .risk-name { font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .risk-check-id { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+    .risk-finding { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px; }
+    .risk-cis { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--text-muted); margin-top: 4px; }
+
+    .sev-badge {
+        font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+        padding: 2px 8px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+    }
+    .sev-high   { background: rgba(255,71,87,0.1);  color: var(--fail); border: 1px solid rgba(255,71,87,0.2); }
+    .sev-medium { background: rgba(255,165,2,0.1);  color: var(--warn); border: 1px solid rgba(255,165,2,0.2); }
+    .sev-low    { background: rgba(0,212,255,0.07); color: var(--accent); border: 1px solid rgba(0,212,255,0.15); }
+
+    /* Expandable remediation */
+    details.risk-remediation { margin-top: 8px; }
+    details.risk-remediation summary {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.78rem; font-weight: 500; color: var(--accent);
+        cursor: pointer; list-style: none; user-select: none;
+        transition: opacity 0.12s;
+    }
+    details.risk-remediation summary::-webkit-details-marker { display: none; }
+    details.risk-remediation summary::before { content: '▶'; font-size: 0.55rem; transition: transform 0.15s; opacity: 0.7; }
+    details.risk-remediation[open] summary::before { transform: rotate(90deg); }
+    details.risk-remediation summary:hover { opacity: 0.8; }
+    .remediation-content {
+        margin-top: 8px;
+        padding: 12px 16px;
+        background: var(--surface2);
+        border-radius: 8px;
+        border: 1px solid var(--border-dim);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.79rem; color: var(--text-dim);
+        white-space: pre-wrap; word-break: break-word; line-height: 1.7;
+    }
+
+    /* ── Action plan ───────────────────────────────── */
+    .priority-block {
+        padding: 14px 0;
+        border-bottom: 1px solid var(--border-dim);
+    }
+    .priority-block:last-child { border-bottom: none; }
+    .priority-label {
+        display: flex; align-items: center; gap: 8px;
+        font-family: 'Syne', sans-serif;
+        font-size: 0.85rem; font-weight: 700;
+        color: var(--text); margin-bottom: 8px;
+    }
+    .priority-num {
+        width: 22px; height: 22px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.72rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+        flex-shrink: 0;
+    }
+    .pnum-high   { background: rgba(255,71,87,0.15); color: var(--fail); border: 1px solid rgba(255,71,87,0.3); }
+    .pnum-medium { background: rgba(255,165,2,0.15); color: var(--warn); border: 1px solid rgba(255,165,2,0.3); }
+    .pnum-low    { background: rgba(0,212,255,0.1);  color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+    .pnum-priv   { background: rgba(88,101,128,0.15); color: var(--text-muted); border: 1px solid var(--border-dim); }
+
+    .check-list {
+        display: flex; flex-direction: column; gap: 6px;
+        margin: 8px 0 0 30px;
+    }
+    .check-list-item {
+        font-size: 0.84rem; color: var(--text-dim); line-height: 1.4;
+        display: flex; align-items: flex-start; gap: 7px;
+    }
+    .check-list-item::before {
+        content: '→'; font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem; color: var(--accent); opacity: 0.6; flex-shrink: 0; margin-top: 2px;
+    }
+
+    .priority-impact {
+        font-size: 0.78rem; color: var(--text-muted);
+        font-style: italic; margin-top: 8px; margin-left: 30px;
+    }
+    .impact-highlight { color: var(--pass); font-weight: 600; font-style: normal; }
+
+    /* ── Action buttons ────────────────────────────── */
+    .action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .btn-primary {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 18px; background: var(--accent);
+        border: none; border-radius: 8px;
+        color: #000; font-size: 0.875rem; font-weight: 700;
+        font-family: 'DM Sans', sans-serif;
+        text-decoration: none; cursor: pointer;
+        transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    .btn-outline {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 18px; background: transparent;
+        border: 1px solid var(--border-dim); border-radius: 8px;
+        color: var(--text-dim); font-size: 0.875rem; font-weight: 500;
+        text-decoration: none; transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-outline:hover { border-color: var(--border); color: var(--text); }
+
+    .btn-disabled {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 18px; background: var(--surface2);
+        border: 1px solid var(--border-dim); border-radius: 8px;
+        color: var(--text-muted); font-size: 0.875rem;
+        cursor: not-allowed; opacity: 0.6;
+    }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<!-- ── Breadcrumb ─────────────────────────────────── -->
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Home</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('dashboard.risk_assessment') }}">Risk Assessment</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Results</span>
+</nav>
+
+<div style="margin-bottom:24px;">
+    <h1 style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;color:var(--text);letter-spacing:-0.01em;">Risk Assessment Results</h1>
+    {% if context.org_name %}
+    <p style="font-size:0.875rem;color:var(--text-muted);margin-top:4px;">
+        For <strong style="color:var(--text-dim);">{{ context.org_name }}</strong>
+        {% if scan %} · scan of <strong style="color:var(--text-dim);">{{ scan.hostname }}</strong>
+        on {{ scan.scan_timestamp.strftime('%Y-%m-%d') }}{% endif %}
+    </p>
+    {% endif %}
+</div>
+
+<!-- ── 1. Risk Score Hero ──────────────────────────── -->
+<div class="result-card">
+    <div class="card-header {{ level | lower }}">
+        <div class="card-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.8;">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            Risk Score
+        </div>
+        <span class="level-badge badge-{{ level | lower }}">{{ level }} RISK</span>
+    </div>
+    <div class="card-body">
+        <div class="score-hero-inner">
+            <div class="score-dial">
+                <div class="score-number score-{{ level | lower }}">{{ score }}</div>
+                <div class="score-out-of">out of 100</div>
+            </div>
+            <div class="score-details">
+                {% if level == 'HIGH' %}
+                <div class="score-heading">Immediate action recommended</div>
+                <div class="score-body">
+                    Your organisation faces significant security risks. Multiple high-severity issues
+                    were detected that require immediate attention. These vulnerabilities could lead to
+                    data breaches, regulatory violations, or operational disruptions.
+                </div>
+                {% elif level == 'MEDIUM' %}
+                <div class="score-heading">Some remediation required</div>
+                <div class="score-body">
+                    Your organisation has moderate security concerns. Several issues were identified
+                    that should be addressed in the near term. While not critical, these vulnerabilities
+                    increase your risk profile and should be prioritised.
+                </div>
+                {% else %}
+                <div class="score-heading">Good security posture</div>
+                <div class="score-body">
+                    Your organisation demonstrates good security hygiene. While a few minor issues were
+                    detected, your overall security posture is strong. Continue regular assessments and
+                    address remaining items to maintain this level.
+                </div>
+                {% endif %}
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:10px;">
+                    Score calculated for a
+                    <strong style="color:var(--text-dim);">{{ context.size or 'medium' }}</strong>
+                    <strong style="color:var(--text-dim);">{{ context.industry or 'organisation' }}</strong>
+                    handling
+                    <strong style="color:var(--text-dim);">{{ context.data_sensitivity or 'medium' }}-sensitivity</strong>
+                    data.
+                </div>
+                <div class="score-bar-track" title="{{ score }}/100">
+                    <div class="score-bar-fill bar-{{ level | lower }}" style="width:{{ score }}%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 2. Organisation Context Recap ──────────────── -->
+<div class="result-card">
+    <div class="card-header">
+        <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.8;color:var(--accent);">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Organisation Context
+        </div>
+    </div>
+    <div class="card-body">
+        {% set size_labels   = {'small': 'Small (< 50 employees)', 'medium': 'Medium (50–250 employees)', 'large': 'Large (> 250 employees)'} %}
+        {% set sens_labels   = {'low': 'Low', 'medium': 'Medium', 'high': 'High', 'critical': 'Critical'} %}
+        <div class="context-grid">
+            <div class="context-item">
+                <span class="context-label">Organisation</span>
+                <span class="context-value">{{ context.org_name or '—' }}</span>
+            </div>
+            <div class="context-item">
+                <span class="context-label">Size</span>
+                <span class="context-value">{{ size_labels.get(context.size, context.size | title) }}</span>
+            </div>
+            <div class="context-item">
+                <span class="context-label">Industry</span>
+                <span class="context-value">{{ context.industry | title if context.industry else '—' }}</span>
+            </div>
+            <div class="context-item">
+                <span class="context-label">Data Sensitivity</span>
+                <span class="context-value">{{ sens_labels.get(context.data_sensitivity, context.data_sensitivity | title) }}</span>
+            </div>
+            {% if context.data_types %}
+            <div class="context-item" style="grid-column: span 2;">
+                <span class="context-label">Data Types Processed</span>
+                <div style="margin-top:4px;">
+                    {% for dt in context.data_types %}
+                    <span class="data-tag">{{ dt | replace('_', ' ') | upper }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ── 3. Top Risk Factors ─────────────────────────── -->
+<div class="result-card">
+    <div class="card-header {% if fail_counts.HIGH > 0 %}danger{% elif fail_counts.MEDIUM > 0 %}warning{% endif %}">
+        <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.8;color:var(--fail);">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Top Security Concerns
+        </div>
+        {% if top_risks %}
+        <span style="font-size:0.7rem;font-family:'JetBrains Mono',monospace;color:var(--text-muted);background:var(--surface);border:1px solid var(--border-dim);padding:2px 9px;border-radius:100px;">
+            showing {{ top_risks | length }} of {{ fail_counts.HIGH + fail_counts.MEDIUM + fail_counts.LOW }} failures
+        </span>
+        {% endif %}
+    </div>
+    <div class="card-body" style="padding:14px 22px;">
+        {% if top_risks %}
+            {% for finding in top_risks %}
+            <div class="risk-item">
+                <div class="risk-item-top">
+                    <div>
+                        <div class="risk-name">{{ finding.name }}</div>
+                        <div class="risk-check-id">{{ finding.check_id }}</div>
+                    </div>
+                    {% set sev = (finding.severity or '') | upper %}
+                    {% if sev == 'HIGH' %}<span class="sev-badge sev-high">HIGH</span>
+                    {% elif sev == 'MEDIUM' %}<span class="sev-badge sev-medium">MEDIUM</span>
+                    {% elif sev == 'LOW' %}<span class="sev-badge sev-low">LOW</span>
+                    {% elif finding.severity %}<span class="sev-badge" style="background:transparent;border:1px solid var(--border-dim);color:var(--text-muted);">{{ finding.severity }}</span>
+                    {% endif %}
+                </div>
+                {% if finding.finding %}
+                <div class="risk-finding">{{ finding.finding }}</div>
+                {% endif %}
+                {% if finding.cis_reference %}
+                <div class="risk-cis">CIS Reference: {{ finding.cis_reference }}</div>
+                {% endif %}
+                {% if finding.remediation %}
+                <details class="risk-remediation">
+                    <summary>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                        Remediation steps
+                    </summary>
+                    <pre class="remediation-content">{{ finding.remediation }}</pre>
+                </details>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <p style="font-size:.875rem;color:var(--text-muted);padding:8px 0;">No failed checks found in this scan — all checks passed or were skipped.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── 4. Prioritised Action Plan ─────────────────── -->
+<div class="result-card">
+    <div class="card-header">
+        <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.8;color:var(--accent);">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            Prioritised Action Plan
+        </div>
+    </div>
+    <div class="card-body" style="padding:14px 22px;">
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:14px;">Fix these issues in order of priority:</p>
+
+        <!-- Priority 1: HIGH -->
+        <div class="priority-block">
+            <div class="priority-label">
+                <span class="priority-num pnum-high">1</span>
+                High Severity Issues
+                {% if fail_counts.HIGH > 0 %}
+                <span style="font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--fail);background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.25);padding:2px 8px;border-radius:100px;font-weight:600;">
+                    {{ fail_counts.HIGH }} issue{{ 's' if fail_counts.HIGH != 1 }}
+                </span>
+                {% endif %}
+            </div>
+            {% if fail_counts.HIGH > 0 and scan %}
+            <div class="check-list">
+                {% for f in scan.findings if f.status == 'FAIL' and (f.severity or '') | upper == 'HIGH' %}
+                <div class="check-list-item">{{ f.name }}</div>
+                {% endfor %}
+            </div>
+            {% if est_reduction > 0 %}
+            <div class="priority-impact">
+                Addressing these could reduce your score by approximately
+                <span class="impact-highlight">{{ est_reduction }} points</span>.
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="check-list">
+                <div class="check-list-item" style="color:var(--pass);">No high-severity failures detected.</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Priority 2: MEDIUM -->
+        <div class="priority-block">
+            <div class="priority-label">
+                <span class="priority-num pnum-medium">2</span>
+                Medium Severity Issues
+                {% if fail_counts.MEDIUM > 0 %}
+                <span style="font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--warn);background:rgba(255,165,2,.1);border:1px solid rgba(255,165,2,.25);padding:2px 8px;border-radius:100px;font-weight:600;">
+                    {{ fail_counts.MEDIUM }} issue{{ 's' if fail_counts.MEDIUM != 1 }}
+                </span>
+                {% endif %}
+            </div>
+            {% if fail_counts.MEDIUM > 0 and scan %}
+            <div class="check-list">
+                {% for f in scan.findings if f.status == 'FAIL' and (f.severity or '') | upper == 'MEDIUM' %}
+                <div class="check-list-item">{{ f.name }}</div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="check-list">
+                <div class="check-list-item" style="color:var(--pass);">No medium-severity failures detected.</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Priority 3: LOW -->
+        {% if fail_counts.LOW > 0 %}
+        <div class="priority-block">
+            <div class="priority-label">
+                <span class="priority-num pnum-low">3</span>
+                Low Severity Issues
+                <span style="font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--accent);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);padding:2px 8px;border-radius:100px;font-weight:600;">
+                    {{ fail_counts.LOW }} issue{{ 's' if fail_counts.LOW != 1 }}
+                </span>
+            </div>
+            <div class="check-list">
+                {% for f in scan.findings if f.status == 'FAIL' and (f.severity or '') | upper == 'LOW' %}
+                <div class="check-list-item">{{ f.name }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Priority 4: Skipped privileged checks -->
+        {% if skipped_priv > 0 %}
+        <div class="priority-block">
+            <div class="priority-label">
+                <span class="priority-num pnum-priv">{{ 3 if fail_counts.LOW == 0 else 4 }}</span>
+                Incomplete Assessment
+                <span style="font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--text-muted);background:rgba(88,101,128,.12);border:1px solid var(--border-dim);padding:2px 8px;border-radius:100px;font-weight:600;">
+                    {{ skipped_priv }} skipped
+                </span>
+            </div>
+            <div class="check-list">
+                <div class="check-list-item">
+                    {{ skipped_priv }} check{{ 's' if skipped_priv != 1 }} require elevated privileges and
+                    {{ 'was' if skipped_priv == 1 else 'were' }} skipped. Re-run the agent with
+                    <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem;background:var(--surface2);padding:1px 5px;border-radius:3px;border:1px solid var(--border-dim);">--privileged</code>
+                    for a complete assessment.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- ── Disclaimer ─────────────────────────────────── -->
+<div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.1);border-radius:10px;padding:12px 18px;font-size:.77rem;color:var(--text-muted);line-height:1.6;margin-bottom:18px;display:flex;gap:10px;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:.6;flex-shrink:0;margin-top:2px;">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>
+        This is a <strong style="color:var(--text-dim);">simplified heuristic score</strong> for prioritisation only —
+        not a substitute for a formal risk assessment (ISO 27005, NIST SP 800-30).
+        Score reduction estimates are approximate.
+    </span>
+</div>
+
+<!-- ── Action buttons ─────────────────────────────── -->
+<div class="action-row">
+    {% if scan %}
+    <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}" class="btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+        View Full Scan Details
+    </a>
+    {% endif %}
+    <a href="{{ url_for('dashboard.risk_assessment') }}" class="btn-outline">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Retake Assessment
+    </a>
+    <span class="btn-disabled" title="PDF export coming soon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download PDF Report
+    </span>
+    <a href="{{ url_for('dashboard.index') }}" class="btn-outline">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Back to Dashboard
+    </a>
+</div>
+{% endblock %}
