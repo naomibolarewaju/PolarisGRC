@@ -335,7 +335,12 @@
 
 <!-- ── Page header ─────────────────────────────────── -->
 <div style="margin-bottom:28px;">
-    <h1 class="page-heading">Compliance Framework Coverage</h1>
+    <h1 class="page-heading">
+        Compliance Framework Coverage
+        <span data-tooltip="Coverage shows the percentage of framework controls with at least one passing technical check. This is evidence of compliance — not full certification, which also requires policies and documentation." tabindex="0" style="cursor:help;color:var(--text-muted);opacity:0.5;vertical-align:middle;margin-left:4px;display:inline-flex;align-items:center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </span>
+    </h1>
     <p class="page-sub">Technical control satisfaction derived from the most recent security scan</p>
 </div>
 
@@ -356,6 +361,12 @@
          'PR.AC'),
     ] %}
 
+    {% set fw_links = {
+        'iso27001': ('https://www.iso.org/isoiec-27001-information-security.html', 'ISO 27001'),
+        'gdpr':     ('https://gdpr.eu/', 'GDPR'),
+        'nist_csf': ('https://www.nist.gov/cyberframework', 'NIST CSF'),
+    } %}
+
     {% for fw_key, fw_name, fw_desc, fw_example in fw_order %}
     {% set fw = compliance_data[fw_key] %}
 
@@ -370,16 +381,19 @@
     <div class="fw-card">
         <div class="fw-card-header">
             <div class="fw-name"
-                 title="{{ fw_desc }}. Example control: {{ fw_example }}">
+                 data-tooltip="{{ fw_desc }}. Technical checks provide evidence toward controls in this framework."
+                 tabindex="0">
                 {{ fw_name }}
             </div>
             <div class="fw-description">{{ fw_desc }}</div>
         </div>
 
         <div class="fw-card-body">
-            <div class="coverage-pct {{ pct_cls }}">{{ fw.coverage_percent }}%</div>
+            <div class="coverage-pct {{ pct_cls }}"
+                 data-tooltip="Percentage of {{ fw_name }} controls with at least one passing check. Higher is better — but 100% technical coverage does not equal formal certification."
+                 tabindex="0">{{ fw.coverage_percent }}%</div>
 
-            <div class="progress-track" title="{{ fw.coverage_percent }}% of controls satisfied">
+            <div class="progress-track">
                 <div class="progress-fill {{ bar_cls }}"
                      style="width: {{ fw.coverage_percent }}%"></div>
             </div>
@@ -400,7 +414,7 @@
             {% endif %}
         </div>
 
-        <div class="fw-card-footer">
+        <div class="fw-card-footer" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
             <a href="{{ url_for('dashboard.list_framework_controls', framework=fw_key) }}"
                class="btn-ghost" style="cursor:pointer;">
                 View all controls
@@ -408,6 +422,15 @@
                     <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                 </svg>
             </a>
+            {% if fw_key in fw_links %}
+            {% set lm_url, lm_label = fw_links[fw_key] %}
+            <a href="{{ lm_url }}" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;color:var(--text-muted);text-decoration:none;transition:color 0.12s;"
+               onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">
+                Learn more
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+            {% endif %}
         </div>
     </div>
     {% endfor %}

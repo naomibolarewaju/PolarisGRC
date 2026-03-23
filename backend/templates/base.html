@@ -49,6 +49,25 @@
             --text-dim:   #64748b;
         }
 
+        /* ── Tooltip ────────────────────────────────────── */
+        .polaris-tooltip {
+            position: absolute;
+            z-index: 9999;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.72rem;
+            line-height: 1.5;
+            padding: 5px 10px;
+            border-radius: 6px;
+            max-width: 240px;
+            pointer-events: none;
+            white-space: normal;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        [data-tooltip] { cursor: help; }
+
         /* ── Global ────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; }
 
@@ -427,5 +446,63 @@
     </script>
 
     {% block scripts %}{% endblock %}
+
+    <script>
+    // ── Tooltip engine ────────────────────────────────────────────────────────
+    (function () {
+        var tip = null;
+
+        function show(el) {
+            var text = el.getAttribute('data-tooltip');
+            if (!text) return;
+            tip = document.createElement('div');
+            tip.className = 'polaris-tooltip';
+            tip.textContent = text;
+            document.body.appendChild(tip);
+            var r = el.getBoundingClientRect();
+            var left = r.left + r.width / 2 - tip.offsetWidth / 2 + window.scrollX;
+            left = Math.max(8, Math.min(left, window.innerWidth - tip.offsetWidth - 8));
+            var top = r.top - tip.offsetHeight - 8 + window.scrollY;
+            if (top < window.scrollY + 4) top = r.bottom + 8 + window.scrollY;
+            tip.style.left = left + 'px';
+            tip.style.top  = top  + 'px';
+        }
+
+        function hide() { if (tip) { tip.remove(); tip = null; } }
+
+        document.addEventListener('mouseover', function (e) { var t = e.target.closest('[data-tooltip]'); if (t) show(t); });
+        document.addEventListener('mouseout',  function (e) { var t = e.target.closest('[data-tooltip]'); if (t) hide(); });
+        document.addEventListener('focusin',   function (e) { if (e.target.hasAttribute('data-tooltip')) show(e.target); });
+        document.addEventListener('focusout',  function (e) { if (e.target.hasAttribute('data-tooltip')) hide(); });
+
+        // ── Auto-add tooltips to known badge / severity classes ───────────────
+        var CLASS_TIPS = {
+            'badge-pass':         'Check passed — security requirement is satisfied.',
+            'badge-fail':         'Check failed — immediate action required.',
+            'badge-skip':         'Check skipped — requires elevated privileges. Re-run the agent with --privileged.',
+            'badge-error':        'Check encountered an error — verify system access and try again.',
+            'sev-high':           'High severity — critical issue, fix immediately to significantly reduce risk.',
+            'sev-medium':         'Medium severity — important concern, address within 30 days.',
+            'sev-low':            'Low severity — minor issue, address when convenient.',
+            'badge-satisfied':    'At least one technical check mapped to this control passed.',
+            'badge-failed':       'Technical checks for this control have failed — action required.',
+            'badge-not-assessed': 'No checks are mapped to this control in the current scan.',
+            'pill-pass':          'Controls where at least one passing technical check exists.',
+            'pill-fail':          'Controls where technical checks failed and need remediation.',
+            'pill-na':            'Controls with no matching checks — run a more complete audit.',
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            Object.keys(CLASS_TIPS).forEach(function (cls) {
+                document.querySelectorAll('.' + cls).forEach(function (el) {
+                    if (!el.hasAttribute('data-tooltip')) {
+                        el.setAttribute('data-tooltip', CLASS_TIPS[cls]);
+                        if (el.tabIndex < 0) el.setAttribute('tabindex', '0');
+                    }
+                });
+            });
+        });
+    }());
+    </script>
 </body>
 </html>

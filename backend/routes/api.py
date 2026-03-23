@@ -4,11 +4,15 @@
 import logging
 from datetime import datetime
 
-from flask import Blueprint, current_app, jsonify, request
+from io import BytesIO
+
+from flask import Blueprint, Response, current_app, jsonify, request, send_file
 
 from backend import db
 from backend.models import Finding, Scan
 from backend.services.compliance_service import ComplianceService
+from backend.services.export_service import ExportService
+from backend.services.risk_service import RiskService
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +27,15 @@ def health():
 
 @api_bp.route("/scan-results", methods=["POST"])
 def submit_scan_results():
-    #accept scan results from the audit agent and persist to the database
+    """Accept scan results from the audit agent and persist to the database.
+
+    Automatically calculates a baseline risk score using default organisational
+    context (medium-sized, medium-sensitivity organisation). Users can run the
+    Risk Assessment Wizard for a context-specific score that accounts for
+    industry, data types, and organisation size.
+
+    Returns 201 with ``scan_id`` on success, 400 for invalid input, 500 on error.
+    """
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"status": "error", "message": "Request body must be JSON"}), 400
@@ -71,6 +83,16 @@ def submit_scan_results():
                 compliance_mappings=check.get("compliance_mappings"),
             )
             db.session.add(finding)
+
+        # Calculate baseline risk score with default organizational context.
+        # Users can perform detailed risk assessment for context-specific scoring.
+        try:
+            svc = RiskService()
+            checks = data.get("checks", [])
+            scan.risk_score = svc.calculate_risk_score(checks, svc.get_default_context())
+        except Exception as risk_exc:
+            logger.warning("Risk score calculation failed, storing None: %s", risk_exc)
+            scan.risk_score = None
 
         db.session.add(scan)
         db.session.commit()
@@ -202,6 +224,37 @@ def get_scan_detail(scan_id: str):
         return jsonify({
             "status": "error",
             "message": "Internal server error while retrieving scan details",
+        }), 500
+
+
+@api_bp.route("/scans/<scan_id>/export/csv", methods=["GET"])
+def export_scan_csv(scan_id: str):
+    """Download all findings for a scan as a CSV file.
+
+    Returns a UTF-8 CSV attachment with 11 columns (check metadata, compliance
+    mappings). Suitable for analysis in Excel or Google Sheets.
+
+    Filename format: ``polaris_scan_<hostname>_<YYYYMMDD>.csv``
+    """
+    try:
+        scan = db.session.get(Scan, scan_id)
+        if scan is None:
+            return jsonify({"status": "error", "message": f"Scan {scan_id} not found"}), 404
+
+        csv_str = ExportService().export_scan_to_csv(scan, scan.findings)
+        buf = BytesIO(csv_str.encode("utf-8"))
+        buf.seek(0)
+
+        filename = (
+            f"polaris_scan_{scan.hostname}_{scan.scan_timestamp.strftime('%Y%m%d')}.csv"
+        )
+        return send_file(buf, mimetype="text/csv", as_attachment=True, download_name=filename)
+
+    except Exception as e:
+        logger.error("Failed to export scan %s as CSV: %s", scan_id, e)
+        return jsonify({
+            "status": "error",
+            "message": "Internal server error while exporting scan",
         }), 500
 
 

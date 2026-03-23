@@ -36,7 +36,19 @@ def index():
 
 @dashboard_bp.route("/scan/<scan_id>")
 def view_scan(scan_id: str):
-    #display detailed results for a single scan, findings grouped by category
+    """Display detailed results for a single scan, findings grouped by category.
+
+    Computes a risk score for the scan using the stored value when available,
+    falling back to an on-the-fly calculation with default organisational context.
+
+    Template context:
+        scan:         Scan ORM object.
+        categories:   OrderedDict of {category_name: [Finding, ...]}.
+        status_counts: Dict of {PASS/FAIL/SKIPPED/ERROR: int}.
+        risk_score:   Float 0–100.
+        risk_level:   'LOW' | 'MEDIUM' | 'HIGH'.
+        risk_color:   'success' | 'warning' | 'danger'.
+    """
     scan = db.session.get(Scan, scan_id)
     if scan is None:
         flash("Scan not found.", "error")
@@ -53,11 +65,23 @@ def view_scan(scan_id: str):
     for finding in scan.findings:
         status_counts[finding.status] = status_counts.get(finding.status, 0) + 1
 
+    # Risk score: use stored value when available, calculate on-the-fly otherwise
+    svc = RiskService()
+    if scan.risk_score is not None:
+        risk_score = scan.risk_score
+    else:
+        risk_score = svc.calculate_risk_score(scan.findings)
+    risk_level = svc.get_risk_level(risk_score)
+    risk_color = svc.get_risk_color(risk_score)
+
     return render_template(
         "scan_detail.html",
         scan=scan,
         categories=categories,
         status_counts=status_counts,
+        risk_score=risk_score,
+        risk_level=risk_level,
+        risk_color=risk_color,
     )
 
 
@@ -280,9 +304,19 @@ def risk_assessment():
         logger.error("Failed to load scan for risk assessment: %s", e)
 
     if request.method == "GET":
+        # If a previous assessment exists in session, redirect to results unless the user
+        # explicitly requested a reset via the "Retake Assessment" button (?reset=1).
+        if request.args.get("reset") != "1" and session.get("risk_score") is not None:
+            return redirect(url_for("dashboard.risk_results"))
+
         if scan is None:
             flash("Please run a security scan first.", "warning")
             return redirect(url_for("dashboard.index"))
+
+        # Clear stale session data so the wizard always starts blank on a reset.
+        for key in ("risk_score", "risk_level", "risk_context", "scan_id"):
+            session.pop(key, None)
+
         return render_template("risk_wizard.html", scan=scan)
 
     # ── POST ──────────────────────────────────────────────────────────────────

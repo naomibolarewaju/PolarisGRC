@@ -329,7 +329,7 @@
         <svg class="stat-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <polyline points="20 6 9 17 4 12"/>
         </svg>
-        <div class="stat-label">Checks Passed</div>
+        <div class="stat-label" data-tooltip="Security checks that passed in the most recent scan — each represents a satisfied security requirement." tabindex="0">Checks Passed</div>
         <div class="stat-value" style="color:var(--pass);">{{ scans[0].passed_checks or 0 }}</div>
         <div class="stat-sub">latest scan</div>
     </div>
@@ -337,7 +337,7 @@
         <svg class="stat-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        <div class="stat-label">Checks Failed</div>
+        <div class="stat-label" data-tooltip="Security checks that failed in the most recent scan — each represents an unmet security requirement needing remediation." tabindex="0">Checks Failed</div>
         <div class="stat-value" style="color:var(--fail);">{{ scans[0].failed_checks or 0 }}</div>
         <div class="stat-sub">latest scan</div>
     </div>

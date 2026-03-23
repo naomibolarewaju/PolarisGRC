@@ -270,6 +270,9 @@
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                 </svg>
                 Organisation Size
+                <span data-tooltip="Size affects your risk multiplier. Larger organisations have wider attack surfaces and face higher GDPR penalties for security incidents." tabindex="0" style="cursor:help;color:var(--text-muted);opacity:0.5;margin-left:5px;display:inline-flex;align-items:center;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </span>
             </div>
         </div>
         <div class="form-section-body">
@@ -327,12 +330,12 @@
                     <option value="" disabled {% if not request.form.get('industry') %}selected{% endif %}>Select your industry…</option>
                     {% for opt, label in [
                         ('healthcare',    'Healthcare'),
-                        ('finance',       'Finance &amp; Banking'),
+                        ('finance',       'Finance & Banking'),
                         ('technology',    'Technology'),
-                        ('retail',        'Retail &amp; E-Commerce'),
+                        ('retail',        'Retail & E-Commerce'),
                         ('manufacturing', 'Manufacturing'),
                         ('education',     'Education'),
-                        ('government',    'Government &amp; Public Sector'),
+                        ('government',    'Government & Public Sector'),
                         ('other',         'Other'),
                     ] %}
                     <option value="{{ opt }}"
@@ -392,6 +395,9 @@
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
                 Data Sensitivity Level
+                <span data-tooltip="Choose the highest sensitivity level your organisation handles. Critical data (health records, financial data) attracts the strictest GDPR obligations and the highest risk multiplier." tabindex="0" style="cursor:help;color:var(--text-muted);opacity:0.5;margin-left:5px;display:inline-flex;align-items:center;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </span>
             </div>
         </div>
         <div class="form-section-body">
