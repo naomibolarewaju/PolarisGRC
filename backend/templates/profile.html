@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+    /* ── Page layout ───────────────────────────────────── */
+    .profile-header {
+        margin-bottom: 28px;
+    }
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+    }
+    .breadcrumb a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.15s;
+    }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb-sep { opacity: 0.4; }
+    .breadcrumb-current { color: var(--text-dim); }
+
+    .page-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+    }
+
+    .profile-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+    @media (max-width: 860px) {
+        .profile-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ─────────────────────────────────────────── */
+    .pcard {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px;
+    }
+    .pcard-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0 0 22px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .pcard-title svg { color: var(--accent); flex-shrink: 0; }
+
+    /* ── Info rows ─────────────────────────────────────── */
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--border-dim);
+    }
+    .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .info-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
+        padding-top: 1px;
+    }
+    .info-value {
+        font-size: 0.88rem;
+        color: var(--text);
+        text-align: right;
+        word-break: break-all;
+    }
+    .info-value.mono {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        color: var(--text-dim);
+    }
+
+    /* stat pills inside info card */
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--accent-dim);
+        border: 1px solid var(--border);
+        color: var(--accent);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+
+    /* avatar / initials circle */
+    .avatar-ring {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), #0070a8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Syne', sans-serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 18px;
+        flex-shrink: 0;
+    }
+
+    /* section divider */
+    .section-divider {
+        height: 1px;
+        background: var(--border-dim);
+        margin: 20px 0;
+    }
+
+    /* ── Password form ─────────────────────────────────── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+        letter-spacing: 0.02em;
+    }
+    .input-wrap { position: relative; }
+    .form-input {
+        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.88rem;
+        padding: 9px 40px 9px 13px;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        -webkit-appearance: none;
+    }
+    .form-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+    }
+    .form-input.has-error { border-color: var(--fail); }
+    .form-input.has-error:focus { box-shadow: 0 0 0 3px rgba(255,71,87,0.1); }
+
+    /* show/hide toggle inside input */
+    .pw-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        transition: color 0.15s;
+    }
+    .pw-toggle:hover { color: var(--accent); }
+
+    .field-error {
+        font-size: 0.77rem;
+        color: var(--fail);
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .field-hint {
+        font-size: 0.77rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 10px;
+        background: var(--accent);
+        color: #000;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 6px;
+        transition: opacity 0.15s, transform 0.1s;
+    }
+    .submit-btn:hover { opacity: 0.88; }
+    .submit-btn:active { transform: scale(0.99); }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.83rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        margin-top: 20px;
+        transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--accent); }
+</style>
+
+<!-- ── Page header ───────────────────────────────────────── -->
+<div class="profile-header">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('dashboard.index') }}">Home</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Profile</span>
+    </nav>
+    <h1 class="page-title">My Profile</h1>
+</div>
+
+<!-- ── Two-column grid ──────────────────────────────────────── -->
+<div class="profile-grid">
+
+    <!-- ── LEFT: Account information ─────────────────────────── -->
+    <div class="pcard">
+        <h2 class="pcard-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            Account Information
+        </h2>
+
+        <!-- Initials avatar -->
+        <div class="avatar-ring" aria-hidden="true">
+            {{ current_user.username[0].upper() }}
+        </div>
+
+        <!-- Info rows -->
+        <div class="info-row">
+            <span class="info-label">Username</span>
+            <span class="info-value">{{ current_user.username }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value mono">{{ current_user.email }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Member Since</span>
+            <span class="info-value">{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Role</span>
+            <span class="info-value">
+                {% if current_user.is_admin %}
+                <span class="stat-pill" style="color:var(--warn);background:rgba(255,165,2,0.08);border-color:rgba(255,165,2,0.25);">Admin</span>
+                {% else %}
+                <span class="stat-pill">Analyst</span>
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Scan statistics -->
+        <p class="pcard-title" style="font-size:0.82rem;margin-bottom:14px;color:var(--text-dim);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            SCAN STATISTICS
+        </p>
+
+        <div class="info-row">
+            <span class="info-label">Total Scans</span>
+            <span class="info-value">
+                <span class="stat-pill">{{ total_scans }}</span>
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Latest Scan</span>
+            <span class="info-value mono">
+                {% if latest_scan %}
+                    {{ latest_scan.scan_timestamp.strftime('%d %b %Y %H:%M') }}
+                    <br>
+                    <span style="font-size:0.75rem;color:var(--text-muted);">{{ latest_scan.hostname }}</span>
+                {% else %}
+                    <span style="color:var(--text-muted);">None</span>
+                {% endif %}
+            </span>
+        </div>
+
+        <a href="{{ url_for('dashboard.index') }}" class="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- ── RIGHT: Change password ─────────────────────────────── -->
+    <div class="pcard">
+        <h2 class="pcard-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Change Password
+        </h2>
+
+        <form method="POST" action="{{ url_for('auth.profile') }}" novalidate>
+            {{ form.hidden_tag() }}
+
+            <!-- Current password -->
+            <div class="form-group">
+                <label class="form-label" for="current_password">
+                    {{ form.current_password.label.text }}
+                </label>
+                <div class="input-wrap">
+                    {{ form.current_password(
+                        id="current_password",
+                        class="form-input" + (" has-error" if form.current_password.errors else ""),
+                        placeholder="Enter your current password",
+                        autocomplete="current-password"
+                    ) }}
+                    <button type="button" class="pw-toggle" onclick="togglePw('current_password', this)" aria-label="Show/hide password">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                {% for error in form.current_password.errors %}
+                <p class="field-error">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                </p>
+                {% endfor %}
+            </div>
+
+            <div class="section-divider" style="margin:12px 0;"></div>
+
+            <!-- New password -->
+            <div class="form-group">
+                <label class="form-label" for="new_password">
+                    {{ form.new_password.label.text }}
+                </label>
+                <div class="input-wrap">
+                    {{ form.new_password(
+                        id="new_password",
+                        class="form-input" + (" has-error" if form.new_password.errors else ""),
+                        placeholder="Min. 8 characters",
+                        autocomplete="new-password"
+                    ) }}
+                    <button type="button" class="pw-toggle" onclick="togglePw('new_password', this)" aria-label="Show/hide password">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                {% if form.new_password.errors %}
+                    {% for error in form.new_password.errors %}
+                    <p class="field-error">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ error }}
+                    </p>
+                    {% endfor %}
+                {% else %}
+                <p class="field-hint">Must be at least 8 characters</p>
+                {% endif %}
+            </div>
+
+            <!-- Confirm new password -->
+            <div class="form-group">
+                <label class="form-label" for="new_password2">
+                    {{ form.new_password2.label.text }}
+                </label>
+                <div class="input-wrap">
+                    {{ form.new_password2(
+                        id="new_password2",
+                        class="form-input" + (" has-error" if form.new_password2.errors else ""),
+                        placeholder="Re-enter new password",
+                        autocomplete="new-password"
+                    ) }}
+                    <button type="button" class="pw-toggle" onclick="togglePw('new_password2', this)" aria-label="Show/hide password">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                {% for error in form.new_password2.errors %}
+                <p class="field-error">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                </p>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="submit-btn">Change Password</button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePw(fieldId, btn) {
+    var input = document.getElementById(fieldId);
+    var isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    // Swap eye icon
+    btn.innerHTML = isHidden
+        ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+        : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+</script>
+{% endblock %}

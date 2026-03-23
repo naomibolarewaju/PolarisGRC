@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+{% block title %}Policy Library — PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+/* ── Header ───────────────────────────────────────────────────── */
+.pm-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+.pm-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 6px;
+}
+.pm-subtitle { font-size: 0.9rem; color: var(--text-dim); margin: 0; }
+
+.btn-new {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 18px;
+    background: var(--accent);
+    color: #080b12;
+    border: none;
+    border-radius: 9px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.btn-new:hover { opacity: 0.85; }
+
+/* ── Search bar ───────────────────────────────────────────────── */
+.search-bar {
+    position: relative;
+    margin-bottom: 16px;
+}
+.search-bar svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+.search-input {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 9px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08);
+}
+.search-input::placeholder { color: var(--text-muted); }
+
+/* ── Table card ───────────────────────────────────────────────── */
+.table-card {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.table-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.policy-table { width: 100%; border-collapse: collapse; }
+.policy-table th {
+    padding: 11px 16px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-dim);
+    text-align: left;
+    white-space: nowrap;
+}
+.policy-table td {
+    padding: 13px 16px;
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border-dim);
+    vertical-align: middle;
+}
+.policy-table tbody tr:last-child td { border-bottom: none; }
+.policy-table tbody tr { transition: background 0.1s; }
+.policy-table tbody tr:hover { background: rgba(255,255,255,0.015); }
+
+/* name cell */
+.policy-name { font-weight: 600; color: var(--text); font-size: 0.9rem; }
+.policy-org  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+/* badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid;
+}
+.badge-md  { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.2); color: var(--accent); }
+.badge-pdf { background: rgba(255,71,87,0.08); border-color: rgba(255,71,87,0.2); color: var(--fail); }
+.badge-type { background: var(--surface2); border-color: var(--border-dim); color: var(--text-dim); }
+
+/* action buttons */
+.btn-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid var(--border-dim);
+    background: var(--surface2);
+    color: var(--text-dim);
+    transition: border-color 0.12s, color 0.12s, background 0.12s;
+    font-family: 'DM Sans', sans-serif;
+}
+.btn-sm:hover { border-color: var(--border); color: var(--text); }
+.btn-sm-danger:hover { border-color: rgba(255,71,87,0.4); color: var(--fail); background: rgba(255,71,87,0.06); }
+
+/* ── Empty state ──────────────────────────────────────────────── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 72px 24px;
+    text-align: center;
+}
+.empty-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border-dim);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    color: var(--text-muted);
+}
+.empty-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+.empty-desc { font-size: 0.875rem; color: var(--text-dim); max-width: 360px; line-height: 1.6; margin: 0 0 20px; }
+
+/* ── Delete modal ─────────────────────────────────────────────── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    max-width: 420px;
+    width: calc(100% - 40px);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 12px;
+}
+.modal-body { font-size: 0.875rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 20px; }
+.modal-body strong { color: var(--text); }
+.modal-warning { color: var(--fail); font-size: 0.82rem; margin-top: 8px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-cancel {
+    padding: 9px 18px;
+    background: var(--surface2);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.12s, color 0.12s;
+}
+.btn-cancel:hover { border-color: var(--border); color: var(--text); }
+.btn-confirm-delete {
+    padding: 9px 18px;
+    background: rgba(255,71,87,0.12);
+    border: 1px solid rgba(255,71,87,0.35);
+    border-radius: 8px;
+    color: var(--fail);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.12s;
+}
+.btn-confirm-delete:hover { background: rgba(255,71,87,0.2); }
+</style>
+
+<!-- Breadcrumb -->
+<nav style="font-size:0.8rem;color:var(--text-muted);margin-bottom:20px;display:flex;align-items:center;gap:6px;">
+    <a href="/" style="color:var(--text-muted);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    <a href="/policies" style="color:var(--text-muted);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Policies</a>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    <span style="color:var(--text);">Library</span>
+</nav>
+
+<!-- Page header -->
+<div class="pm-header">
+    <div>
+        <h1 class="pm-title">Policy Library</h1>
+        <p class="pm-subtitle">View, download, and manage your generated security policies.</p>
+    </div>
+    <a href="{{ url_for('dashboard.policy_generator') }}" class="btn-new">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Generate New Policy
+    </a>
+</div>
+
+{% if policies %}
+<!-- Search bar -->
+<div class="search-bar">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" id="policy-search" class="search-input" placeholder="Search policies by name or type…">
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <div class="table-header">
+        <span id="policy-count">{{ policies|length }} {{ 'policy' if policies|length == 1 else 'policies' }}</span>
+        <span>Sorted by date, newest first</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="policy-table" id="policy-table">
+            <thead>
+                <tr>
+                    <th>Policy Name</th>
+                    <th>Type</th>
+                    <th>Format</th>
+                    <th>Generated</th>
+                    <th>Size</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for policy in policies %}
+                <tr data-search="{{ policy.display_name|lower }} {{ policy.policy_type|lower }} {{ policy.format }}">
+                    <td>
+                        <div class="policy-name">{{ policy.display_name }}</div>
+                        <div class="policy-org" style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;">{{ policy.filename }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-type">{{ policy.policy_type }}</span>
+                    </td>
+                    <td>
+                        {% if policy.format == 'pdf' %}
+                        <span class="badge badge-pdf">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            PDF
+                        </span>
+                        {% else %}
+                        <span class="badge badge-md">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Markdown
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space:nowrap;">{{ policy.date_created }}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">{{ policy.file_size }}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <a href="{{ url_for('api.download_policy', filename=policy.filename, fmt=policy.format) }}"
+                               class="btn-sm" download
+                               data-tooltip="Download {{ 'PDF' if policy.format == 'pdf' else 'Markdown' }} file">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                                Download
+                            </a>
+                            <button type="button"
+                                    class="btn-sm btn-sm-danger"
+                                    onclick="confirmDelete('{{ policy.filename }}', '{{ policy.display_name }}')"
+                                    data-tooltip="Permanently delete this policy file">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                    <path d="M10 11v6M14 11v6"/>
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- No results from search -->
+    <div id="no-search-results" style="display:none;padding:40px;text-align:center;font-size:0.875rem;color:var(--text-muted);">
+        No policies match your search.
+    </div>
+</div>
+
+{% else %}
+<!-- Empty state -->
+<div class="table-card">
+    <div class="empty-state">
+        <div class="empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+        </div>
+        <div class="empty-title">No policies yet</div>
+        <p class="empty-desc">You haven't generated any security policies. Create your first policy to get started.</p>
+        <a href="{{ url_for('dashboard.policy_generator') }}" class="btn-new">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Generate First Policy
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Delete confirmation modal ────────────────────────────── -->
+<div class="modal-overlay" id="delete-modal" onclick="closeDeleteModal(event)">
+    <div class="modal-box">
+        <div class="modal-title">Delete Policy</div>
+        <div class="modal-body">
+            Are you sure you want to delete <strong id="delete-name-display"></strong>?
+            <div class="modal-warning">This action cannot be undone.</div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <form id="delete-form" method="POST" style="margin:0;">
+                <button type="submit" class="btn-confirm-delete">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                    </svg>
+                    Delete Policy
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+(function () {
+    // ── Delete modal ──────────────────────────────────────────────
+    window.confirmDelete = function (filename, displayName) {
+        document.getElementById('delete-name-display').textContent = displayName;
+        document.getElementById('delete-form').action = '/policies/delete/' + filename;
+        document.getElementById('delete-modal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.closeModal = function () {
+        document.getElementById('delete-modal').classList.remove('open');
+        document.body.style.overflow = '';
+    };
+
+    window.closeDeleteModal = function (e) {
+        // Only close when clicking the overlay backdrop, not the box itself
+        if (e.target === document.getElementById('delete-modal')) closeModal();
+    };
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    // ── Search ────────────────────────────────────────────────────
+    var searchInput = document.getElementById('policy-search');
+    var countEl     = document.getElementById('policy-count');
+    var noResults   = document.getElementById('no-search-results');
+    var rows        = document.querySelectorAll('#policy-table tbody tr');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            var q = this.value.trim().toLowerCase();
+            var visible = 0;
+
+            rows.forEach(function (row) {
+                var text = (row.dataset.search || row.textContent).toLowerCase();
+                var show = !q || text.includes(q);
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+
+            if (countEl) {
+                countEl.textContent = visible + (visible === 1 ? ' policy' : ' policies') + (q ? ' matching' : '');
+            }
+            if (noResults) {
+                noResults.style.display = (visible === 0 && rows.length > 0) ? 'block' : 'none';
+            }
+        });
+    }
+}());
+</script>
+{% endblock %}
+{% endblock %}

@@ -56,6 +56,7 @@ entry_test.json
 linux_complete.json
 linux_priv.json
 wsl_priv_scan.json
+new_scan.json
 
 
 # Packaging artifacts
@@ -65,3 +66,14 @@ wsl_priv_scan.json
 polarisgrc.db
 
 test_ids.py
+
+policies/generated/*.pdf
+policies/generated/*.md
+
+migrations/
+
+policies/
+
+.flaskenv
+
+test_policy.pdf

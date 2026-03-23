@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Register - PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+    .auth-wrap {
+        min-height: calc(100vh - 120px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 40px 36px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    .auth-logo-ring {
+        width: 52px;
+        height: 52px;
+        background: linear-gradient(135deg, var(--accent), #0070a8);
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 18px;
+    }
+    .auth-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.55rem;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0 0 4px;
+    }
+    .auth-subtitle {
+        font-size: 0.88rem;
+        color: var(--text-dim);
+        margin: 0;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+    }
+    .form-label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+        letter-spacing: 0.02em;
+    }
+    .form-input {
+        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border-dim);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        padding: 10px 14px;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        -webkit-appearance: none;
+    }
+    .form-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0,212,255,0.12);
+    }
+    .form-input.has-error {
+        border-color: var(--fail);
+    }
+    .form-input.has-error:focus {
+        box-shadow: 0 0 0 3px rgba(255,71,87,0.12);
+    }
+    .field-error {
+        font-size: 0.78rem;
+        color: var(--fail);
+        margin-top: 5px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .field-hint {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 5px;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 11px;
+        background: var(--accent);
+        color: #000;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.92rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: opacity 0.15s, transform 0.1s;
+    }
+    .submit-btn:hover { opacity: 0.88; }
+    .submit-btn:active { transform: scale(0.99); }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.85rem;
+        color: var(--text-dim);
+    }
+    .auth-footer a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    .divider {
+        height: 1px;
+        background: var(--border-dim);
+        margin: 24px 0;
+    }
+
+    /* password strength row */
+    .pw-req {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 5px;
+    }
+    .pw-req svg { flex-shrink: 0; opacity: 0.5; }
+
+    @media (max-width: 480px) {
+        .auth-card { padding: 28px 20px; }
+    }
+</style>
+
+<div class="auth-wrap">
+    <div class="auth-card">
+
+        <div class="auth-header">
+            <div class="auth-logo-ring">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+            </div>
+            <h1 class="auth-title">Create Account</h1>
+            <p class="auth-subtitle">Register for PolarisGRC</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.register') }}" novalidate>
+            {{ form.hidden_tag() }}
+
+            <!-- Username -->
+            <div class="form-group">
+                <label class="form-label" for="username">{{ form.username.label.text }}</label>
+                {{ form.username(
+                    id="username",
+                    class="form-input" + (" has-error" if form.username.errors else ""),
+                    placeholder="e.g. alice",
+                    autocomplete="username"
+                ) }}
+                {% for error in form.username.errors %}
+                <p class="field-error">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                </p>
+                {% endfor %}
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label class="form-label" for="email">{{ form.email.label.text }}</label>
+                {{ form.email(
+                    id="email",
+                    class="form-input" + (" has-error" if form.email.errors else ""),
+                    placeholder="you@example.com",
+                    autocomplete="email"
+                ) }}
+                {% for error in form.email.errors %}
+                <p class="field-error">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                </p>
+                {% endfor %}
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Password -->
+            <div class="form-group">
+                <label class="form-label" for="password">{{ form.password.label.text }}</label>
+                {{ form.password(
+                    id="password",
+                    class="form-input" + (" has-error" if form.password.errors else ""),
+                    placeholder="Min. 8 characters",
+                    autocomplete="new-password"
+                ) }}
+                {% if form.password.errors %}
+                    {% for error in form.password.errors %}
+                    <p class="field-error">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ error }}
+                    </p>
+                    {% endfor %}
+                {% else %}
+                <p class="pw-req">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Password must be at least 8 characters
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+                <label class="form-label" for="password2">{{ form.password2.label.text }}</label>
+                {{ form.password2(
+                    id="password2",
+                    class="form-input" + (" has-error" if form.password2.errors else ""),
+                    placeholder="Re-enter your password",
+                    autocomplete="new-password"
+                ) }}
+                {% for error in form.password2.errors %}
+                <p class="field-error">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                </p>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="submit-btn">Register</button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account?
+            <a href="{{ url_for('auth.login') }}">Log in</a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

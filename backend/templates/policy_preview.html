@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+{% block title %}{{ policy_title }} — PolarisGRC{% endblock %}
+
+{% block content %}
+<style>
+.preview-header { margin-bottom: 24px; }
+.preview-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 6px;
+}
+.preview-meta { font-size: 0.85rem; color: var(--text-muted); }
+
+/* ── Action bar ───────────────────────────────────────────────── */
+.action-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 12px;
+    align-items: center;
+}
+.action-bar-label { font-size: 0.82rem; color: var(--text-muted); margin-right: auto; }
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.855rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+    border: 1px solid var(--border-dim);
+    background: var(--surface2);
+    color: var(--text-dim);
+}
+.btn-action:hover { border-color: var(--border); color: var(--text); }
+.btn-action.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #080b12;
+    font-weight: 600;
+}
+.btn-action.primary:hover { opacity: 0.85; }
+
+/* ── Markdown renderer ────────────────────────────────────────── */
+.md-viewer {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 14px;
+    padding: 40px 48px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--text);
+}
+@media (max-width: 680px) { .md-viewer { padding: 24px 20px; } }
+
+.md-viewer h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+    margin: 0 0 24px;
+}
+.md-viewer h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 36px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-dim);
+}
+.md-viewer h2:first-of-type { border-top: none; margin-top: 0; }
+.md-viewer h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 24px 0 8px;
+}
+.md-viewer h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin: 16px 0 6px;
+}
+.md-viewer p { margin: 0 0 14px; }
+.md-viewer strong { color: var(--text); font-weight: 600; }
+.md-viewer em { color: var(--text-dim); }
+.md-viewer hr { border: none; border-top: 1px solid var(--border-dim); margin: 28px 0; }
+.md-viewer ul, .md-viewer ol {
+    margin: 10px 0 16px;
+    padding-left: 24px;
+}
+.md-viewer li { margin-bottom: 5px; }
+.md-viewer li input[type="checkbox"] { margin-right: 6px; }
+.md-viewer code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    background: var(--surface2);
+    border: 1px solid var(--border-dim);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--accent);
+}
+.md-viewer pre {
+    background: var(--surface2);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 14px 0;
+}
+.md-viewer pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+}
+.md-viewer blockquote {
+    border-left: 3px solid var(--accent);
+    margin: 16px 0;
+    padding: 10px 16px;
+    background: rgba(0, 212, 255, 0.05);
+    border-radius: 0 6px 6px 0;
+    color: var(--text-dim);
+    font-style: normal;
+}
+.md-viewer blockquote strong { color: var(--accent); }
+.md-viewer table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.875rem;
+}
+.md-viewer th {
+    background: var(--surface2);
+    border: 1px solid var(--border-dim);
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.82rem;
+}
+.md-viewer td {
+    border: 1px solid var(--border-dim);
+    padding: 8px 12px;
+    color: var(--text-dim);
+    vertical-align: top;
+}
+.md-viewer tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+/* ── PDF notice ───────────────────────────────────────────────── */
+.pdf-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 72px 24px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 14px;
+}
+</style>
+
+<!-- Breadcrumb -->
+<nav style="font-size:0.8rem;color:var(--text-muted);margin-bottom:20px;display:flex;align-items:center;gap:6px;">
+    <a href="/" style="color:var(--text-muted);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    <a href="/policies" style="color:var(--text-muted);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Policies</a>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    <span style="color:var(--text);">Preview</span>
+</nav>
+
+<!-- Header -->
+<div class="preview-header">
+    <h1 class="preview-title">{{ policy_title }}</h1>
+    <p class="preview-meta">
+        Generated &nbsp;·&nbsp;
+        {% if policy_format == 'pdf' %}PDF document{% else %}Markdown document{% endif %}
+        &nbsp;·&nbsp; Saved to <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent);">policies/generated/{{ filename }}.{{ 'pdf' if policy_format == 'pdf' else 'md' }}</code>
+    </p>
+</div>
+
+<!-- Action bar -->
+<div class="action-bar">
+    <span class="action-bar-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px;color:var(--pass);">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Policy generated successfully
+    </span>
+
+    <a href="{{ url_for('api.download_policy', filename=filename, fmt=policy_format) }}"
+       class="btn-action primary" download>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download {{ 'PDF' if policy_format == 'pdf' else 'Markdown' }}
+    </a>
+
+    <a href="{{ url_for('dashboard.policy_generator') }}" class="btn-action">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.54"/>
+        </svg>
+        Generate Another
+    </a>
+
+    <a href="{{ url_for('dashboard.index') }}" class="btn-action">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Dashboard
+    </a>
+</div>
+
+{% if policy_format == 'pdf' %}
+<!-- PDF — can't render inline, show download prompt -->
+<div class="pdf-notice">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--surface2);border:1px solid var(--border-dim);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--accent);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;">PDF Ready</div>
+    <p style="font-size:0.875rem;color:var(--text-dim);max-width:380px;line-height:1.6;margin:0 0 20px;">
+        Your PDF policy document has been generated. Use the Download button above to save it to your device.
+    </p>
+    <a href="{{ url_for('api.download_policy', filename=filename, fmt='pdf') }}"
+       class="btn-action primary" download style="font-size:0.9rem;padding:10px 22px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download PDF
+    </a>
+</div>
+
+{% elif policy_content %}
+<!-- Markdown preview rendered as HTML -->
+<div class="md-viewer" id="md-viewer">
+    <!-- Content injected by JS to avoid Jinja escaping issues -->
+</div>
+
+<script>
+(function () {
+    // Raw markdown stored safely in a data attribute to avoid template escaping issues
+    var raw = document.getElementById('md-raw-store').textContent;
+    document.getElementById('md-viewer').innerHTML = renderMarkdown(raw);
+
+    // Minimal markdown → HTML renderer (headings, bold, italic, code, tables, hr, lists, blockquotes)
+    function renderMarkdown(md) {
+        var lines = md.split('\n');
+        var html = '';
+        var inTable = false;
+        var inList = false;
+        var listTag = '';
+
+        function flushList() {
+            if (inList) { html += '</' + listTag + '>'; inList = false; listTag = ''; }
+        }
+        function flushTable() {
+            if (inTable) { html += '</tbody></table>'; inTable = false; }
+        }
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+
+            // Headings
+            var hm = line.match(/^(#{1,4})\s+(.*)/);
+            if (hm) {
+                flushList(); flushTable();
+                var lvl = hm[1].length;
+                html += '<h' + lvl + '>' + inline(hm[2]) + '</h' + lvl + '>';
+                continue;
+            }
+
+            // HR
+            if (/^---+$/.test(line.trim())) {
+                flushList(); flushTable();
+                html += '<hr>';
+                continue;
+            }
+
+            // Blockquote
+            if (/^>\s?/.test(line)) {
+                flushList(); flushTable();
+                html += '<blockquote>' + inline(line.replace(/^>\s?/, '')) + '</blockquote>';
+                continue;
+            }
+
+            // Table row
+            if (/^\|/.test(line)) {
+                if (/^\|[\s\-:]+\|/.test(line)) continue; // separator row
+                var cells = line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+                if (!inTable) {
+                    flushList();
+                    html += '<table><thead><tr>';
+                    cells.forEach(function(c) { html += '<th>' + inline(c.trim()) + '</th>'; });
+                    html += '</tr></thead><tbody>';
+                    inTable = true;
+                } else {
+                    html += '<tr>';
+                    cells.forEach(function(c) { html += '<td>' + inline(c.trim()) + '</td>'; });
+                    html += '</tr>';
+                }
+                continue;
+            }
+            if (inTable && !/^\|/.test(line)) { flushTable(); }
+
+            // Checkbox list item
+            var chk = line.match(/^- \[([ x])\] (.*)/);
+            if (chk) {
+                if (!inList) { html += '<ul>'; inList = true; listTag = 'ul'; }
+                var checked = chk[1] === 'x' ? ' checked' : '';
+                html += '<li><input type="checkbox" disabled' + checked + '> ' + inline(chk[2]) + '</li>';
+                continue;
+            }
+
+            // Unordered list
+            if (/^[-*] /.test(line)) {
+                if (!inList || listTag !== 'ul') { flushList(); html += '<ul>'; inList = true; listTag = 'ul'; }
+                html += '<li>' + inline(line.replace(/^[-*] /, '')) + '</li>';
+                continue;
+            }
+
+            // Ordered list
+            var olm = line.match(/^\d+\. (.*)/);
+            if (olm) {
+                if (!inList || listTag !== 'ol') { flushList(); html += '<ol>'; inList = true; listTag = 'ol'; }
+                html += '<li>' + inline(olm[1]) + '</li>';
+                continue;
+            }
+
+            flushList();
+
+            // Empty line
+            if (!line.trim()) { flushTable(); continue; }
+
+            // Paragraph
+            flushTable();
+            html += '<p>' + inline(line) + '</p>';
+        }
+
+        flushList(); flushTable();
+        return html;
+    }
+
+    function inline(s) {
+        return s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            // Undo over-escaping for already-safe constructs we produce
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`(.+?)`/g, '<code>$1</code>')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);">$1</a>');
+    }
+}());
+</script>
+
+<!-- Hidden store for raw markdown — avoids Jinja2 / JS escaping conflicts -->
+<script type="text/plain" id="md-raw-store">{{ policy_content }}</script>
+
+{% else %}
+<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:0.9rem;">
+    Policy content could not be loaded. <a href="{{ url_for('dashboard.policy_generator') }}" style="color:var(--accent);">Try generating again.</a>
+</div>
+{% endif %}
+{% endblock %}

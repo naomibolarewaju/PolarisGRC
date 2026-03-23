@@ -6,5 +6,13 @@ psutil>=5.9.0
 #backend dependencies
 flask>=3.0.0
 flask-sqlalchemy>=3.1.0
-flask-login>=0.6.2
-bcrypt>=4.0.0
+flask-migrate>=4.0.0
+flask-login>=0.6.3
+flask-wtf>=1.2.0
+bcrypt>=4.1.0
+email-validator>=2.1.0
+
+#policy generation
+jinja2>=3.1.0
+markdown>=3.5
+weasyprint>=60.0
