@@ -8,8 +8,9 @@ from io import BytesIO
 
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
 from flask_login import current_user, login_required
+from flask_wtf.csrf import generate_csrf
 
-from backend import db
+from backend import csrf, db
 from backend.models import Finding, Scan
 from backend.services.compliance_service import ComplianceService
 from backend.services.export_service import ExportService
@@ -26,10 +27,52 @@ def health():
     return jsonify({"status": "healthy", "version": "1.0.0"})
 
 
+@api_bp.route("/csrf-token", methods=["GET"])
+def get_csrf_token():
+    """Return a fresh CSRF token for programmatic clients.
+
+    Programmatic clients (e.g. the audit agent, scripts, or single-page
+    apps that do not use WTForms) must include this token in the
+    ``X-CSRFToken`` request header on every state-changing request
+    (POST, PUT, PATCH, DELETE) unless the endpoint is ``@csrf.exempt``.
+
+    Usage example::
+
+        # 1. Fetch a token (requires an active session / login first)
+        token_resp = requests.get("http://localhost:5000/api/csrf-token")
+        token = token_resp.json()["csrf_token"]
+
+        # 2. Include it in subsequent requests
+        requests.post(
+            "http://localhost:5000/api/scan-results",
+            json=payload,
+            headers={"X-CSRFToken": token},
+        )
+
+    Returns:
+        JSON ``{"csrf_token": "<token>"}`` with HTTP 200.
+    """
+    return jsonify({"csrf_token": generate_csrf()})
+
+
 @api_bp.route("/scan-results", methods=["POST"])
+@csrf.exempt
 @login_required
 def submit_scan_results():
     """Accept scan results from the audit agent and persist to the database.
+
+    This endpoint is ``@csrf.exempt`` because it is designed for programmatic
+    access by the PolarisGRC audit agent, which sends JSON with an active
+    session cookie (obtained by logging in via ``/login``) rather than a
+    browser form.  CSRF forgery is not a practical threat here because:
+
+    * The request body must be ``application/json`` — browsers cannot set
+      this Content-Type in a cross-origin form POST.
+    * The ``@login_required`` decorator still enforces authentication.
+
+    Programmatic clients that *do* need to call other non-exempt endpoints
+    should first call ``GET /api/csrf-token`` to obtain a token and then
+    include it as an ``X-CSRFToken`` header.
 
     Automatically calculates a baseline risk score using default organisational
     context (medium-sized, medium-sensitivity organisation). Users can run the

@@ -10,12 +10,19 @@ Extensions initialised here
 * **LoginManager** — session-based user authentication via Flask-Login.
   Redirects unauthenticated requests to ``auth.login`` and reloads the active
   user from the database on every request via the ``user_loader`` callback.
+* **CSRFProtect** (``csrf``) — validates the ``_csrf_token`` field (or
+  ``X-CSRFToken`` header) on every state-changing request.  JSON API routes
+  that are designed for programmatic agent access are opted out individually
+  with ``@csrf.exempt``.
 """
+
+from datetime import timedelta
 
 from flask import Flask, flash, jsonify, redirect, request, url_for
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 
 # Module-level extension instances.  Initialised with the app inside
 # create_app() so they can be imported elsewhere without triggering the
@@ -23,6 +30,7 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
+csrf = CSRFProtect()
 
 
 def create_app(config_class=None):
@@ -51,9 +59,31 @@ def create_app(config_class=None):
 
     app.config.from_object(config_class)
 
+    # ── Secure session-cookie settings ────────────────────────────────────────
+    # Prevents the session cookie from being sent over plain HTTP.
+    # Set to False in development if you are not using HTTPS on localhost.
+    app.config["SESSION_COOKIE_SECURE"] = True
+
+    # Blocks JavaScript from reading the session cookie, mitigating XSS theft.
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+
+    # 'Lax' sends the cookie on same-site requests and safe cross-site
+    # navigations (e.g. clicking a link), but not on cross-site POST/AJAX.
+    # This is a defence-in-depth layer on top of CSRF tokens.
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+    # How long a "remember me" session lasts (also the max cookie lifetime).
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
+
     # ── Database ───────────────────────────────────────────────────────────────
     db.init_app(app)
     migrate.init_app(app, db)
+
+    # ── CSRF protection ────────────────────────────────────────────────────────
+    # Automatically validates _csrf_token on POST/PUT/PATCH/DELETE for every
+    # view that is not decorated with @csrf.exempt.  Flask-WTF's FlaskForm
+    # embeds the token via {{ form.hidden_tag() }}.
+    csrf.init_app(app)
 
     # ── Authentication ─────────────────────────────────────────────────────────
     login_manager.login_view = "auth.login"
