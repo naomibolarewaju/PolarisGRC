@@ -232,6 +232,7 @@
     <!-- ── Left: Form ──────────────────────────────────────────── -->
     <div>
         <form method="POST" action="{{ url_for('dashboard.policy_generator') }}" id="policy-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <!-- Section 1: Template Selection -->
             <div class="card" style="margin-bottom:16px;">

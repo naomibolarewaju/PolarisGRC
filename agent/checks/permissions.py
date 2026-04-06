@@ -65,6 +65,8 @@ class PermissionChecker:
 
                     for filename in filenames:
                         filepath = os.path.join(dirpath, filename)
+                        if os.path.islink(filepath):
+                            continue
                         try:
                             file_stat = os.stat(filepath)
                             if file_stat.st_mode & stat.S_IWOTH:

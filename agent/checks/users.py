@@ -223,15 +223,36 @@ class UserChecker:
             self.checks.append(result)
             return result
 
+        # Shells used exclusively by service/system accounts — never interactive.
+        _NON_INTERACTIVE_SHELLS = {"/usr/sbin/nologin", "/bin/false"}
+
+        # Well-known service accounts that may carry a UID >= 1000 on some
+        # distributions (e.g. nobody = 65534) but are not real login accounts.
+        _SERVICE_ACCOUNT_NAMES = {
+            "nobody", "root", "daemon", "bin", "sys", "sync", "games", "man",
+            "lp", "mail", "news", "uucp", "proxy", "www-data", "backup",
+            "list", "irc", "_apt",
+        }
+
         real_users: set[str] = set()
         for line in passwd_text.splitlines():
             parts = line.strip().split(":")
-            if len(parts) >= 3:
-                try:
-                    if int(parts[2]) >= MIN_REAL_USER_UID:
-                        real_users.add(parts[0])
-                except ValueError:
-                    continue
+            # /etc/passwd fields: username:pw:uid:gid:gecos:home:shell
+            if len(parts) < 7:
+                continue
+            username = parts[0]
+            shell = parts[6]
+            try:
+                uid = int(parts[2])
+            except ValueError:
+                continue
+            if uid < MIN_REAL_USER_UID:
+                continue
+            if shell in _NON_INTERACTIVE_SHELLS:
+                continue
+            if username in _SERVICE_ACCOUNT_NAMES:
+                continue
+            real_users.add(username)
 
         if not real_users:
             result["status"] = "PASS"

@@ -40,7 +40,38 @@ class PasswordChecker:
             },
         }
 
-        # Try each PAM config path
+        minlen = DEFAULT_MINLEN
+
+        # 1. Check /etc/security/pwquality.conf first — canonical source when
+        #    pam_pwquality.so is in use. Supports "minlen = 12" and "minlen=12".
+        try:
+            pwquality_text = Path(PWQUALITY_CONF_PATH).read_text()
+            for line in pwquality_text.splitlines():
+                match = re.match(r"^\s*minlen\s*=\s*(\d+)", line)
+                if match:
+                    minlen = int(match.group(1))
+                    result["finding"] = f"Minimum password length is {minlen} characters"
+                    if minlen >= MIN_LENGTH_THRESHOLD:
+                        result["status"] = "PASS"
+                    else:
+                        result["status"] = "FAIL"
+                        result["remediation"] = (
+                            "Edit /etc/security/pwquality.conf:\n"
+                            "  minlen = 12\n"
+                            "Or edit /etc/pam.d/common-password:\n"
+                            "  password requisite pam_pwquality.so minlen=12"
+                        )
+                    self.checks.append(result)
+                    return result
+        except FileNotFoundError:
+            pass  # fall through to PAM files
+        except PermissionError:
+            result["status"] = "ERROR"
+            result["finding"] = f"Permission denied reading {PWQUALITY_CONF_PATH}"
+            self.checks.append(result)
+            return result
+
+        # 2. Fall back to PAM config files if pwquality.conf has no minlen.
         content: str | None = None
         for pam_path in PAM_PATHS:
             try:
@@ -60,14 +91,14 @@ class PasswordChecker:
             self.checks.append(result)
             return result
 
-        # Look for minlen in pam_pwquality.so or pam_unix.so lines
-        minlen = DEFAULT_MINLEN
+        # Look for minlen in pam_pwquality.so or pam_unix.so lines.
+        # Support both "minlen=12" and "minlen = 12".
         for line in content.splitlines():
             stripped = line.strip()
             if stripped.startswith("#") or not stripped:
                 continue
             if "pam_pwquality.so" in stripped or "pam_unix.so" in stripped:
-                match = re.search(r"minlen=(\d+)", stripped)
+                match = re.search(r"minlen\s*=\s*(\d+)", stripped)
                 if match:
                     minlen = int(match.group(1))
                     break

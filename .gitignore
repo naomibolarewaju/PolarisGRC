@@ -77,3 +77,13 @@ policies/
 .flaskenv
 
 test_policy.pdf
+polaris-agent.tar.gz
+polarisgrc-full.tar.gz
+misconfigured-scan-working.json
+misconfigured-scan.json
+MANUAL_TEST_CHECKLIST.md
+checklist_runner.py
+baseline-scan.json
+baseline-scan-test.json
+
+

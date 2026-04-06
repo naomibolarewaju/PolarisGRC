@@ -236,6 +236,7 @@
 <!-- ── Wizard form ────────────────────────────────── -->
 <form method="POST" action="{{ url_for('dashboard.risk_assessment') }}"
       class="wizard-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <!-- Section 1: Organisation name -->
     <div class="form-section">

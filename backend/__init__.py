@@ -60,9 +60,8 @@ def create_app(config_class=None):
     app.config.from_object(config_class)
 
     # ── Secure session-cookie settings ────────────────────────────────────────
-    # Prevents the session cookie from being sent over plain HTTP.
-    # Set to False in development if you are not using HTTPS on localhost.
-    app.config["SESSION_COOKIE_SECURE"] = True
+    # SESSION_COOKIE_SECURE comes from Config (env-driven): False in local HTTP
+    # development, True when SESSION_COOKIE_SECURE=true is set in production.
 
     # Blocks JavaScript from reading the session cookie, mitigating XSS theft.
     app.config["SESSION_COOKIE_HTTPONLY"] = True

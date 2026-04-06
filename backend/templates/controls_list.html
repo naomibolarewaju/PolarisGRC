@@ -310,9 +310,8 @@
 
 <!-- ── Status summary (if scan available) ─────────── -->
 {% if scan and control_status %}
-{% set n_satisfied   = control_status.values() | select('equalto', 'satisfied')   | list | length %}
-{% set n_failed      = control_status.values() | select('equalto', 'failed')      | list | length %}
-{% set n_not_assessed = control_status.values() | select('equalto', 'not_assessed') | list | length %}
+{% set n_satisfied = control_status.values() | select('equalto', 'satisfied') | list | length %}
+{% set n_failed    = control_status.values() | select('equalto', 'failed')    | list | length %}
 <div class="summary-card">
     <div class="summary-meta">
         Based on scan of <strong>{{ scan.hostname }}</strong>
@@ -321,7 +320,6 @@
     <div class="summary-pills">
         <span class="sum-pill pill-satisfied">{{ n_satisfied }} satisfied</span>
         <span class="sum-pill pill-failed">{{ n_failed }} failed</span>
-        <span class="sum-pill pill-na">{{ n_not_assessed }} not assessed</span>
     </div>
 </div>
 {% endif %}
@@ -351,11 +349,6 @@
             <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--fail);"></span>
             Failed
         </button>
-        <button class="status-filter-btn" id="filter-not-assessed"
-                onclick="filterByStatus('not_assessed', this)">
-            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text-muted);"></span>
-            Not Assessed
-        </button>
     </div>
     {% endif %}
 </div>
@@ -381,8 +374,6 @@
                 <span class="status-badge badge-satisfied">Satisfied</span>
             {% elif status == 'failed' %}
                 <span class="status-badge badge-failed">Failed</span>
-            {% elif status == 'not_assessed' %}
-                <span class="status-badge badge-not-assessed">Not Assessed</span>
             {% endif %}
         </div>
 

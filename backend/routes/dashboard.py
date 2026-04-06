@@ -151,7 +151,7 @@ def compliance_overview():
             compliance_data = {}
             for fw_key, fw_meta in _FRAMEWORKS.items():
                 controls = service.get_all_controls_for_framework(fw_key)
-                satisfied = failed = not_assessed = 0
+                satisfied = failed = 0
                 for control_id in controls:
                     statuses = [
                         f.status
@@ -159,19 +159,18 @@ def compliance_overview():
                         if control_id in (f.compliance_mappings or {}).get(fw_key, [])
                     ]
                     if not statuses or all(s in ("SKIPPED", "ERROR") for s in statuses):
-                        not_assessed += 1
+                        pass  # not assessed — excluded from totals
                     elif "PASS" in statuses:
                         satisfied += 1
                     else:
                         failed += 1
-                total = len(controls)
+                assessed = satisfied + failed
                 compliance_data[fw_key] = {
                     **fw_meta,
-                    "total_controls": total,
+                    "total_controls": assessed,
                     "satisfied": satisfied,
                     "failed": failed,
-                    "not_assessed": not_assessed,
-                    "coverage_percent": round(satisfied / total * 100, 1) if total else 0.0,
+                    "coverage_percent": round(satisfied / assessed * 100, 1) if assessed else 0.0,
                 }
         except Exception as e:
             logger.error("Failed to calculate compliance data: %s", e)
@@ -236,11 +235,13 @@ def list_framework_controls(framework: str):
                     if control_id in (f.compliance_mappings or {}).get(framework, [])
                 ]
                 if not statuses or all(s in ("SKIPPED", "ERROR") for s in statuses):
-                    control_status[control_id] = "not_assessed"
+                    pass  # not assessed — excluded from list
                 elif "PASS" in statuses:
                     control_status[control_id] = "satisfied"
                 else:
                     control_status[control_id] = "failed"
+            # Only show controls that were actually assessed
+            controls = {cid: info for cid, info in controls.items() if cid in control_status}
     except Exception as e:
         logger.error("Failed to load scan for controls list: %s", e)
 
